@@ -13,7 +13,7 @@ The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is
 - Bounded binary memory storage with version/size checks and failure-safe loading.
 - Native PreLoader HUD console, on-screen Talk button, and Android keyboard input callback.
 - Local preview transcript save/load under the mod data directory.
-- Optional runtime event bridge to BedrockTools API ABI v1: local-player tick, game-mode action, and attack event subscriptions. It safely fails closed if BedrockTools is not installed or its API is incompatible.
+- Optional runtime event bridge to BedrockTools API ABI v1: local-player tick, game-mode action, and attack subscriptions, with block-break/place, interaction, and item-use counters. It safely fails closed if BedrockTools is not installed or its API is incompatible.
 - Host tests for conversation, persistence, and runtime bridge lifecycle.
 
 ## Runtime bridge requirements
