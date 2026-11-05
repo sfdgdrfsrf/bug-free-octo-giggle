@@ -14,6 +14,7 @@ The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is
 - Native PreLoader HUD console, on-screen Talk button, and Android keyboard input callback.
 - Local preview transcript save/load under the mod data directory.
 - Optional runtime event bridge to BedrockTools API ABI v1: local-player tick, game-mode action, and attack subscriptions, with block-break/place, interaction, and item-use counters. It safely fails closed if BedrockTools is not installed or its API is incompatible.
+- Read-only probe for BedrockTools v1.5.10's `ActorManagerList` signature (SignatureId ordinal 12). The HUD reports whether the signature resolved; MobTalk does not call it or inspect the returned actor list.
 - Host tests for conversation, persistence, and runtime bridge lifecycle.
 
 ## Runtime bridge requirements
