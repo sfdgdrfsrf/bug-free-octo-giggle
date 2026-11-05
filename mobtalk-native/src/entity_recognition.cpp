@@ -1,5 +1,6 @@
 #include "mobtalk/entity_recognition.hpp"
 #include <mutex>
+#include <cmath>
 namespace mobtalk::entities {
 namespace {
 std::mutex gMutex;
@@ -7,6 +8,7 @@ SnapshotStore gSnapshots;
 EntityTracker gTracker;
 }
 bool ingestVerifiedFrame(std::span<const EntitySample> samples,float x,float y,float z,float radius) noexcept {
+    if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(z)||!std::isfinite(radius)||radius<=0) return false;
     std::lock_guard lock(gMutex);
     if(!gSnapshots.publish(samples)) return false;
     gTracker.update(gSnapshots.copy(),x,y,z,radius);
