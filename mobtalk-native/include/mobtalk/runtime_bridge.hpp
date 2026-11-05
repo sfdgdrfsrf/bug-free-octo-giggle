@@ -13,8 +13,13 @@ struct Snapshot {
     bool bedrockToolsAvailable{};
     bool subscribed{};
     bool actorManagerListSignatureAvailable{};
+    bool actorEnumerationEnabled{};
+    std::uint64_t actorEnumerationCalls{};
+    std::uint64_t lastActorCount{};
+    std::uint64_t actorEnumerationFailures{};
 };
 bool start() noexcept;
+void setActorEnumerationEnabled(bool enabled) noexcept;
 void stop() noexcept;
 Snapshot snapshot() noexcept;
 }
