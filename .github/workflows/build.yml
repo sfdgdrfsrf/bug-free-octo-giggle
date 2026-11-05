@@ -11,6 +11,7 @@ on:
       - "manifest.json"
       - ".github/workflows/build.yml"
       - "tests/**"
+      - "mobtalk-native/**"
 
 jobs:
   safety-tests:
@@ -28,6 +29,12 @@ jobs:
             tests/port_engines_test.cpp src/features/port_engines.cpp -o port_engines_test
       - name: Run native port engine tests
         run: ./port_engines_test
+      - name: Compile and run MobTalk native tests
+        run: |
+          set -euo pipefail
+          c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include \
+            mobtalk-native/tests/mobtalk_test.cpp mobtalk-native/src/mobtalk.cpp -o mobtalk_test
+          ./mobtalk_test
 
   android-arm64:
     runs-on: ubuntu-latest
@@ -85,7 +92,7 @@ jobs:
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: levimania-mobile-arm64-levipack
+          name: native-levipacks-arm64
           path: |
             dist/levimania-mobile-arm64.levipack
             dist/mobtalk-native-arm64.levipack
