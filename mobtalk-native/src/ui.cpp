@@ -68,7 +68,7 @@ void render() {
     const auto bridge=runtime::snapshot();
     const std::string bridgeState=(bridge.bedrockToolsAvailable && bridge.subscribed)
         ? "Runtime bridge: connected" : "Runtime bridge: offline";
-    const std::string eventCounts="Events T/A/X: "+std::to_string(bridge.localPlayerTicks)+"/"+
+    const std::string eventCounts="Tick / action / attack: "+std::to_string(bridge.localPlayerTicks)+"/"+
         std::to_string(bridge.gameModeActions)+"/"+std::to_string(bridge.attackEvents);
     std::vector<pl::modmenu::DrawCommand> commands;
     if(visible) {
