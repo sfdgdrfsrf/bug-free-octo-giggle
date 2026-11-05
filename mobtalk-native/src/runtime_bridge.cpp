@@ -25,13 +25,33 @@ void* gHandle = nullptr;
 const ApiV1* gApi = nullptr;
 std::uint64_t gTickSubscription = 0, gActionSubscription = 0, gAttackSubscription = 0;
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
-void onEvent(EventType type, void*, void*) {
-    // Treat payloads as opaque. Their internal layout belongs to the
-    // version-specific BedrockTools adapter; never dereference or retain them.
+std::atomic<std::uint64_t> gBreaks{0}, gPlaces{0}, gInteracts{0}, gUses{0};
+
+// These prefixes mirror the public BedrockTools event declarations. Only the
+// leading fields are read; game pointers and the rest of the payload are never
+// retained or dereferenced.
+struct LocalPlayerTickPrefix { void* player; };
+struct GameModeActionPrefix { std::uint8_t modeKind; std::uint8_t action; };
+static_assert(offsetof(LocalPlayerTickPrefix, player) == 0);
+static_assert(offsetof(GameModeActionPrefix, action) == 1);
+
+void onEvent(EventType type, void* payload, void*) {
+    if (!payload) return;
     if (type == kLocalPlayerTick) {
-        gTicks.fetch_add(1, std::memory_order_relaxed);
+        const auto* event = static_cast<const LocalPlayerTickPrefix*>(payload);
+        if (event->player) gTicks.fetch_add(1, std::memory_order_relaxed);
     } else if (type == kGameModeAction) {
+        const auto* event = static_cast<const GameModeActionPrefix*>(payload);
         gActions.fetch_add(1, std::memory_order_relaxed);
+        // Public GameModeAction enum values: destroy start/stop=0/1,
+        // build/place=2, use item=3, use-as-attack=4, use-on=5, interact=6.
+        switch (event->action) {
+            case 0: case 1: gBreaks.fetch_add(1, std::memory_order_relaxed); break;
+            case 2: gPlaces.fetch_add(1, std::memory_order_relaxed); break;
+            case 3: case 4: case 5: gUses.fetch_add(1, std::memory_order_relaxed); break;
+            case 6: gInteracts.fetch_add(1, std::memory_order_relaxed); break;
+            default: break;
+        }
     } else if (type == kAttack) {
         gAttacks.fetch_add(1, std::memory_order_relaxed);
     }
@@ -79,7 +99,9 @@ void stop() noexcept {
 Snapshot snapshot() noexcept {
     std::lock_guard lock(gMutex);
     return {gTicks.load(std::memory_order_relaxed), gActions.load(std::memory_order_relaxed),
-            gAttacks.load(std::memory_order_relaxed), gApi != nullptr,
-            gTickSubscription != 0 || gActionSubscription != 0 || gAttackSubscription != 0};
+            gAttacks.load(std::memory_order_relaxed), gBreaks.load(std::memory_order_relaxed),
+            gPlaces.load(std::memory_order_relaxed), gInteracts.load(std::memory_order_relaxed),
+            gUses.load(std::memory_order_relaxed), gApi != nullptr,
+            gTickSubscription != 0 && gActionSubscription != 0 && gAttackSubscription != 0};
 }
 }
