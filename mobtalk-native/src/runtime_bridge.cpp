@@ -25,11 +25,11 @@ void* gHandle = nullptr;
 const ApiV1* gApi = nullptr;
 std::uint64_t gTickSubscription = 0, gActionSubscription = 0, gAttackSubscription = 0;
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
-void onEvent(EventType type, void* payload, void*) {
-    if (!payload) return;
+void onEvent(EventType type, void*, void*) {
+    // Treat payloads as opaque. Their internal layout belongs to the
+    // version-specific BedrockTools adapter; never dereference or retain them.
     if (type == kLocalPlayerTick) {
-        void* player = *static_cast<void**>(payload);
-        if (player) gTicks.fetch_add(1, std::memory_order_relaxed);
+        gTicks.fetch_add(1, std::memory_order_relaxed);
     } else if (type == kGameModeAction) {
         gActions.fetch_add(1, std::memory_order_relaxed);
     } else if (type == kAttack) {
@@ -64,7 +64,9 @@ bool start() noexcept {
     gTickSubscription = gApi->subscribe(kLocalPlayerTick, kNormalPriority, onEvent, nullptr);
     gActionSubscription = gApi->subscribe(kGameModeAction, kNormalPriority, onEvent, nullptr);
     gAttackSubscription = gApi->subscribe(kAttack, kNormalPriority, onEvent, nullptr);
-    if (!gTickSubscription && !gActionSubscription && !gAttackSubscription) {
+    // The bridge is considered connected only when every advertised event
+    // subscription succeeds. Partial registration is rolled back fail-closed.
+    if (!gTickSubscription || !gActionSubscription || !gAttackSubscription) {
         releaseLocked();
         return false;
     }
