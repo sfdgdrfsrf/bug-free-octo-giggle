@@ -12,6 +12,7 @@ struct Snapshot {
     std::uint64_t itemUseActions{};
     bool bedrockToolsAvailable{};
     bool subscribed{};
+    bool actorManagerListSignatureAvailable{};
 };
 bool start() noexcept;
 void stop() noexcept;
