@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
+#include <span>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -169,7 +171,7 @@ void unregisterConsole() noexcept {
         g.enabled=false; g.open=false; g.draft.clear();
     }
     pl::input::hideKeyboard();
-    pl::modmenu::submitDrawCommands("mobtalk_native.core",{});
+    pl::modmenu::submitDrawCommands("mobtalk_native.core",std::span<const pl::modmenu::DrawCommand>{});
     pl::modmenu::unregisterButton("mobtalk_native.open");
     pl::modmenu::unregisterModule("mobtalk_native.core");
 }
