@@ -62,7 +62,7 @@ bool writeMemory(std::ostream& out,const CreatureMemory& m) {
     const auto count=std::min<std::size_t>(m.history.size(),MaxHistory);
     if(!writeString(out,m.creatureId,MaxId) ||
        !writeString(out,m.personality,MaxPersonality) ||
-       !writeU32(out,static_cast<std::uint32_t>(m.friendship+100)) ||
+       !writeU32(out,static_cast<std::uint32_t>(std::clamp(m.friendship,-100,100)+100)) ||
        !writeU32(out,m.conversations) ||
        !writeU32(out,static_cast<std::uint32_t>(count))) return false;
     const auto begin=m.history.size()-count;
@@ -122,11 +122,6 @@ bool saveWorldMemory(const std::filesystem::path& file,
             out.flush(); if(!out.good()) return false;
         }
         std::filesystem::rename(temp,file,ec);
-        if(ec) {
-            std::error_code removeError;
-            std::filesystem::remove(file,removeError);
-            ec.clear(); std::filesystem::rename(temp,file,ec);
-        }
         if(ec) { std::error_code ignored; std::filesystem::remove(temp,ignored); return false; }
         return true;
     } catch(...) { return false; }
