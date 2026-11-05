@@ -19,6 +19,10 @@ struct MovementCosts {
     float descend{1.1f}, ladder{2.5f}, water{3.0f}, door{1.8f}, hazard{1000.0f};
 };
 float movementCost(MoveKind kind, const MovementCosts& costs) noexcept;
+struct RouteNode { int x{0}, y{0}, z{0}; };
+struct RouteEdge { std::uint16_t from{0}, to{0}; float cost{1.0f}; };
+struct RouteResult { std::vector<std::uint16_t> nodes; float totalCost{0.0f}; bool found{false}; };
+RouteResult planWeightedRoute(const std::vector<RouteNode>& nodes, const std::vector<RouteEdge>& edges, std::uint16_t start, std::uint16_t goal, std::size_t maxNodes = 4096);
 
 // 3. AdaptiveMobs: records observable player actions; no game-world mutation occurs here.
 enum class PlayerAction : std::uint8_t { Craft, Mine, PlaceBlock, Fight, Flee, Build, Count };
@@ -30,10 +34,16 @@ float adaptationConfidence(const ActionMemory& memory) noexcept;
 // 4. Capri Chip: deterministic parser for supported offline companion requests.
 enum class CompanionCommand : std::uint8_t { Unknown, Follow, Stay, FindDiamonds, DigTunnel, BuildWall, PlaceLights, Attack };
 CompanionCommand parseCompanionCommand(std::string_view request) noexcept;
+struct CompanionTaskQueue { std::array<CompanionCommand, 16> tasks{}; std::size_t count{0}; };
+bool enqueueCompanionTask(CompanionTaskQueue& queue, CompanionCommand command) noexcept;
+CompanionCommand dequeueCompanionTask(CompanionTaskQueue& queue) noexcept;
 
 // 5. JJK: original technique metadata framework; values are balancing placeholders, not copied assets.
 struct TechniqueSpec { std::string_view id; float energyCost; float cooldownSeconds; std::uint8_t grade; };
 const std::array<TechniqueSpec, 14>& cursedTechniques() noexcept;
+struct TechniqueRuntime { float energy{100.0f}; std::array<float, 14> cooldowns{}; };
+void tickTechniqueCooldowns(TechniqueRuntime& runtime, float deltaSeconds) noexcept;
+bool castTechnique(TechniqueRuntime& runtime, std::size_t techniqueIndex) noexcept;
 
 // 6. Jim's Mine: extraction loop state machine.
 enum class MinePhase : std::uint8_t { Hub, Preparing, Exploring, Extracting, Failed, Completed };
