@@ -17,6 +17,7 @@ struct Snapshot {
     std::uint64_t actorEnumerationCalls{};
     std::uint64_t lastActorCount{};
     std::uint64_t actorEnumerationFailures{};
+    bool worldSessionSeen{};
 };
 bool start() noexcept;
 void setActorEnumerationEnabled(bool enabled) noexcept;
