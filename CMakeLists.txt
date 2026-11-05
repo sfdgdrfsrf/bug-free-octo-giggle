@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 3.21)
+project(LeviManiaMobile VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(FetchContent)
+FetchContent_Declare(
+    preloader_android
+    GIT_REPOSITORY https://github.com/LiteLDev/preloader-android.git
+    GIT_TAG 0.2.2
+)
+FetchContent_MakeAvailable(preloader_android)
+
+add_library(levimania_mobile SHARED
+    src/main.cpp
+    src/core/config.cpp
+    src/features/feature_registry.cpp
+)
+
+target_include_directories(levimania_mobile PRIVATE include)
+target_link_libraries(levimania_mobile PRIVATE preloader log)
+target_compile_options(levimania_mobile PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(levimania_mobile PROPERTIES
+    OUTPUT_NAME "levimania_mobile"
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+)
