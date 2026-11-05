@@ -84,9 +84,21 @@ jobs:
           mkdir -p dist/MobTalkNative
           cp mobtalk-native/manifest.json dist/MobTalkNative/
           cp build/libmobtalk_native.so dist/MobTalkNative/
-          cd dist
-          zip -r levimania-mobile-arm64.levipack LeviManiaMobile
-          zip -r mobtalk-native-arm64.levipack MobTalkNative
+          (
+            cd dist/LeviManiaMobile
+            zip -q ../levimania-mobile-arm64.levipack manifest.json liblevimania_mobile.so
+          )
+          (
+            cd dist/MobTalkNative
+            zip -q ../mobtalk-native-arm64.levipack manifest.json libmobtalk_native.so
+          )
+          # Verify both packages have their manifest and native library at ZIP root.
+          unzip -Z1 dist/levimania-mobile-arm64.levipack | sort > /tmp/levimania-files.txt
+          unzip -Z1 dist/mobtalk-native-arm64.levipack | sort > /tmp/mobtalk-files.txt
+          grep -qx 'manifest.json' /tmp/levimania-files.txt
+          grep -qx 'liblevimania_mobile.so' /tmp/levimania-files.txt
+          grep -qx 'manifest.json' /tmp/mobtalk-files.txt
+          grep -qx 'libmobtalk_native.so' /tmp/mobtalk-files.txt
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
