@@ -42,6 +42,7 @@ constexpr std::size_t kMaxActorCount = 4096;
 // internal actor-list invocation hard-locked even if a config toggle is set.
 constexpr bool kActorProbeRuntimeValidated = false;
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
+std::atomic<bool> gWorldSessionSeen{false};
 std::atomic<std::uint64_t> gBreaks{0}, gPlaces{0}, gInteracts{0}, gUses{0};
 
 // These prefixes mirror the public BedrockTools event declarations. Only the
@@ -58,6 +59,9 @@ void onEvent(EventType type, void* payload, void*) {
         const auto* event = static_cast<const LocalPlayerTickPrefix*>(payload);
         if (event->player) {
             gTicks.fetch_add(1, std::memory_order_relaxed);
+            // A local-player tick is the safest available signal that a world
+            // session is active. This starts the scanner session, not actor enumeration.
+            gWorldSessionSeen.store(true, std::memory_order_release);
             // Experimental, read-only probe. This path is OFF by default and
             // must only be enabled manually after matching the exact game build.
             auto getActors = gGetRuntimeActorList.load(std::memory_order_acquire);
@@ -172,6 +176,7 @@ Snapshot snapshot() noexcept {
             gActorEnumerationEnabled.load(std::memory_order_relaxed),
             gActorEnumerationCalls.load(std::memory_order_relaxed),
             gLastActorCount.load(std::memory_order_relaxed),
-            gActorEnumerationFailures.load(std::memory_order_relaxed)};
+            gActorEnumerationFailures.load(std::memory_order_relaxed),
+            gWorldSessionSeen.load(std::memory_order_acquire)};
 }
 }
