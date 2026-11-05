@@ -1,36 +1,17 @@
 # LeviMania Mobile
 
-A native ARM64 Android mod scaffold for LeviLaunchroid / LeviLauncher. This project ports feature ideas from Java mods into a native Bedrock-side implementation; it does **not** load Java .jar files.
-
-## Target
-
-- LeviLaunchroid native preloader SDK
-- Android ARM64 (arm64-v8a)
-- C++20
-- Minecraft Bedrock 1.21.80+ / Android 9+ as documented by the target loader
-
-## Current status
-
-This is the initial project scaffold: native lifecycle entry point, config directory setup, feature roadmap registry, and an Android GitHub Actions build workflow. Feature systems are not implemented yet. The first CI run is the compatibility check for the pinned SDK and packaging steps.
+Native ARM64 LeviLaunchroid mod scaffold for Minecraft Bedrock Android.
 
 ## Planned feature ports
+- **Personalized-inspired:** configurable world variation and ambience profiles; rendering, biome, weather and sound changes only through APIs exposed by the installed runtime.
+- **Baritone-inspired:** bounded A* grid path planner and task-planning foundation for navigation, mining and construction. Executing movement or changing blocks requires a compatible world/player bridge.
+- **AdaptiveMobs-inspired:** player-performance adaptation model for aggression, health and damage scaling. Entity changes require an exposed entity API.
+- **Capri Chip-inspired:** companion state foundation for bond, stamina and follow behavior. Spawning, rendering and AI require entity hooks.
+- **JJK-inspired:** cursed-energy resource, regeneration and technique-cost/cooldown checks. Damage, particles and animations require combat/render hooks.
+- **Jim's Mine-inspired:** depth/isolation/noise encounter director and mimic-reveal threshold. World generation, block events and mob spawning require world/entity hooks.
 
-- **Personalized-inspired:** configurable world variation and ambience, limited to APIs exposed by the native runtime.
-- **Baritone-inspired:** navigation, path planning, mining and construction assistance.
-- **AdaptiveMobs-inspired:** mob behavior adaptation and difficulty scaling.
-- **Capri Chip-inspired:** companion/creature systems.
-- **JJK-inspired:** cursed-energy combat abilities and techniques.
-- **Jim's Mine-inspired:** mining progression, underground encounters and mimic-style threats.
+## Runtime safety
+This is a native C++ port, not a Java/Fabric/Forge jar loader. Pure planning and simulation code is independent of Minecraft internals. No guessed offsets or unsupported Bedrock calls are used. Features requiring unavailable runtime APIs remain bridge-dependent.
 
 ## Build
-
-The GitHub Actions workflow builds for `arm64-v8a` and packages a `.levipack` artifact. Run it from **Actions → Build LeviMania Mobile → Run workflow**.
-
-## Important implementation boundary
-
-Bedrock's internal world, block, entity and player APIs are not all exposed as stable public APIs by the native loader. Each gameplay feature must be implemented only against verified SDK interfaces or a version-gated runtime bridge. Do not use guessed offsets or assume Java mod APIs are available.
-
-## Sources
-
-- https://docs.levimc.org/LeviLaunchroid/
-- https://github.com/LiteLDev/preloader-android
+GitHub Actions cross-compiles for Android ARM64 and packages the shared library with manifest.json into a .levipack.
