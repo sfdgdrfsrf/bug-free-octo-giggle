@@ -2,6 +2,10 @@
 
 A separate LeviLaunchroid `.levipack` target for an independently authored native creature-conversation layer inspired by the documented feature set of CreatureChat.
 
+## Target compatibility
+
+The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is not yet a verified live-runtime target: LeviLaunchroid v1.6.0 release notes document 26.60 support, and BedrockTools release metadata/source warn that signatures and offsets are version-specific. The generic Android build does not prove 26.62 compatibility. See [COMPATIBILITY.md](COMPATIBILITY.md) for the validation checklist and fail-closed rules.
+
 ## Implemented
 
 - Per-creature identity/personality, bounded conversation history, friendship, and allow-listed behavior-marker parsing.
