@@ -1,6 +1,7 @@
 #include "mobtalk/entity_tracker.hpp"
 #include <array>
 #include <cassert>
+#include <cstdio>
 using namespace mobtalk::entities;
 int main(){
  SnapshotFrame f{};f.generation=1;f.count=3;
