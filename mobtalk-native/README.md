@@ -4,7 +4,7 @@ A separate LeviLaunchroid `.levipack` target for an independently authored nativ
 
 ## Target compatibility
 
-The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is not yet a verified live-runtime target: LeviLaunchroid v1.6.0 release notes document 26.60 support, and BedrockTools release metadata/source warn that signatures and offsets are version-specific. The generic Android build does not prove 26.62 compatibility. See [COMPATIBILITY.md](COMPATIBILITY.md) for the validation checklist and fail-closed rules.
+The observed target is **Minecraft Bedrock Android 26.60 (arm64-v8a)** with **BedrockTools v1.5.10**, as displayed in the user's launcher screenshot. The exact game binary/build ID and runtime signatures are not verified. The generic Android build does not prove 26.60 compatibility. See [COMPATIBILITY.md](COMPATIBILITY.md) for the validation checklist and fail-closed rules.
 
 ## Implemented
 
@@ -14,7 +14,7 @@ The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is
 - Native PreLoader HUD console, on-screen Talk button, and Android keyboard input callback.
 - Local preview transcript save/load under the mod data directory.
 - Optional runtime event bridge to BedrockTools API ABI v1: local-player tick, game-mode action, and attack subscriptions, with block-break/place, interaction, and item-use counters. It safely fails closed if BedrockTools is not installed or its API is incompatible.
-- Read-only probe for BedrockTools v1.5.10's `ActorManagerList` signature (SignatureId ordinal 12), plus an **OFF-by-default experimental actor-count probe**. If manually enabled, it invokes the same internal function pattern used by BedrockTools Tablist during LocalPlayerTick and counts non-null entries only (maximum 4,096). It never dereferences or retains actor pointers.
+- Read-only availability check for BedrockTools v1.5.10's `ActorManagerList` signature (SignatureId ordinal 12). The actor-count probe is **hard-locked OFF in code** and cannot be enabled by config; it is not invoked.
 - Host tests for conversation, persistence, runtime bridge lifecycle, and the pointer-free entity snapshot store.
 - Pointer-free entity snapshot core: bounded to 128 entities per frame, copies type/name and position/rotation into fixed-size owned buffers, rejects non-finite coordinates and duplicate transient keys, and synchronizes publication/readback. This is a tested data layer only; no Bedrock actor adapter feeds it yet.
 
@@ -23,7 +23,7 @@ The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is
 
 For the optional event bridge to connect, install a compatible BedrockTools build that exports `BedrockTools_GetApi` from `libBedrockTools.so` (API ABI version 1). MobTalk uses the documented public C ABI shape and subscribes to the published event IDs. It does not copy BedrockTools source or its internal SDK headers. BedrockTools' own version-specific signatures/offsets remain owned by that runtime.
 
-The current bridge observes player-tick, game-mode-action, and attack event notifications. The `actor_enumeration_probe` setting is OFF by default and currently hard-locked in code, so a config toggle cannot invoke it. It uses a version-specific internal BedrockTools function and Level offsets; do not unlock it until the exact Minecraft 26.62 binary, offsets, and C++ ABI are verified. Only use it on a backed-up disposable world after confirming the exact game/runtime combination. It counts actor pointers but does not dereference or retain them. This is not yet entity identity or behavior integration.
+The current bridge observes player-tick, game-mode-action, and attack event notifications. The `actor_enumeration_probe` is hard-locked OFF in code, so a config toggle cannot invoke it. It uses a version-specific internal BedrockTools function and Level offsets; do not unlock it until the exact Minecraft 26.60 binary, offsets, and C++ ABI are verified. It is not a supported entity API and is not yet entity identity or behavior integration.
 
 ## Important live-runtime boundary
 
