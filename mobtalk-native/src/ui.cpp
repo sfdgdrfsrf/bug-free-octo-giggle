@@ -165,7 +165,7 @@ bool registerConsole(pl::mod::ModContext& context) {
         .description("Native conversation core and local HUD console; live entity bridge unavailable.")
         .modId(context.id()).defaultEnabled(true)
         .config("chat_memory","Save local console transcript",pl::modmenu::ConfigType::Toggle,"false")
-        .config("actor_enumeration_probe","EXPERIMENTAL: count loaded actors (read-only; may crash on unsupported game builds)",pl::modmenu::ConfigType::Toggle,"false")
+        .config("actor_enumeration_probe","LOCKED: actor probe disabled pending exact 26.62 validation",pl::modmenu::ConfigType::Toggle,"false")
         .onConfigChanged([](std::string_view,std::string_view key,std::string_view value) {
             if(key=="actor_enumeration_probe") {
                 runtime::setActorEnumerationEnabled(value=="true" || value=="1");
