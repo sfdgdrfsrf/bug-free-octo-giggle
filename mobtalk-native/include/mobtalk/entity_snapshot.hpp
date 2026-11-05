@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <span>
+#include <mutex>
 
 namespace mobtalk::entities {
 inline constexpr std::size_t kMaxEntitiesPerFrame = 128;
@@ -43,6 +45,7 @@ public:
     SnapshotFrame copy() const noexcept;
     void clear() noexcept;
 private:
+    mutable std::mutex mutex_;
     SnapshotFrame frame_{};
 };
 
