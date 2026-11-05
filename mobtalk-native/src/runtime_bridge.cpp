@@ -21,10 +21,14 @@ constexpr EventType kLocalPlayerTick = 2;
 constexpr EventType kAttack = 4;
 constexpr EventType kGameModeAction = 8;
 constexpr EventPriority kNormalPriority = 0;
+// BedrockTools v1.5.10 SignatureId::ActorManagerList is ordinal 12.
+// Probe only: the function is used internally by BedrockTools but is not a documented external iterator.
+constexpr std::uint16_t kActorManagerListSignatureId = 12;
 std::mutex gMutex;
 void* gHandle = nullptr;
 const ApiV1* gApi = nullptr;
 std::uint64_t gTickSubscription = 0, gActionSubscription = 0, gAttackSubscription = 0;
+std::atomic<bool> gActorManagerListSignatureAvailable{false};
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
 std::atomic<std::uint64_t> gBreaks{0}, gPlaces{0}, gInteracts{0}, gUses{0};
 
@@ -78,10 +82,13 @@ bool start() noexcept {
     auto getter = reinterpret_cast<GetApi>(dlsym(gHandle, "BedrockTools_GetApi"));
     gApi = getter ? getter(kAbiVersion) : nullptr;
     if (!gApi || gApi->abiVersion != kAbiVersion ||
-        gApi->structSize < sizeof(ApiV1) || !gApi->subscribe || !gApi->unsubscribe) {
+        gApi->structSize < sizeof(ApiV1) || !gApi->subscribe || !gApi->unsubscribe || !gApi->resolveSignature) {
         releaseLocked();
         return false;
     }
+    // Read-only capability probe. Never invoke the resolved function here.
+    gActorManagerListSignatureAvailable.store(
+        gApi->resolveSignature(kActorManagerListSignatureId) != 0, std::memory_order_relaxed);
     gTickSubscription = gApi->subscribe(kLocalPlayerTick, kNormalPriority, onEvent, nullptr);
     gActionSubscription = gApi->subscribe(kGameModeAction, kNormalPriority, onEvent, nullptr);
     gAttackSubscription = gApi->subscribe(kAttack, kNormalPriority, onEvent, nullptr);
@@ -103,6 +110,7 @@ Snapshot snapshot() noexcept {
             gAttacks.load(std::memory_order_relaxed), gBreaks.load(std::memory_order_relaxed),
             gPlaces.load(std::memory_order_relaxed), gInteracts.load(std::memory_order_relaxed),
             gUses.load(std::memory_order_relaxed), gApi != nullptr,
-            gTickSubscription != 0 && gActionSubscription != 0 && gAttackSubscription != 0};
+            gTickSubscription != 0 && gActionSubscription != 0 && gAttackSubscription != 0,
+            gActorManagerListSignatureAvailable.load(std::memory_order_relaxed)};
 }
 }
