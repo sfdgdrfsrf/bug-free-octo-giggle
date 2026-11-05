@@ -2,6 +2,8 @@
 #include <dlfcn.h>
 #include <cstddef>
 #include <mutex>
+#include <vector>
+#include <exception>
 namespace mobtalk::runtime {
 namespace {
 using EventType = std::uint32_t;
@@ -29,6 +31,13 @@ void* gHandle = nullptr;
 const ApiV1* gApi = nullptr;
 std::uint64_t gTickSubscription = 0, gActionSubscription = 0, gAttackSubscription = 0;
 std::atomic<bool> gActorManagerListSignatureAvailable{false};
+std::atomic<bool> gActorEnumerationEnabled{false};
+using GetRuntimeActorList = std::vector<void*>(*)(void*);
+std::atomic<GetRuntimeActorList> gGetRuntimeActorList{nullptr};
+std::atomic<std::uint64_t> gActorEnumerationCalls{0}, gLastActorCount{0}, gActorEnumerationFailures{0};
+constexpr std::uintptr_t kPlayerLevelOffset = 0x1F0;
+constexpr std::uintptr_t kLevelActorManagerOffset = 0x478;
+constexpr std::size_t kMaxActorCount = 4096;
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
 std::atomic<std::uint64_t> gBreaks{0}, gPlaces{0}, gInteracts{0}, gUses{0};
 
@@ -44,7 +53,42 @@ void onEvent(EventType type, void* payload, void*) {
     if (!payload) return;
     if (type == kLocalPlayerTick) {
         const auto* event = static_cast<const LocalPlayerTickPrefix*>(payload);
-        if (event->player) gTicks.fetch_add(1, std::memory_order_relaxed);
+        if (event->player) {
+            gTicks.fetch_add(1, std::memory_order_relaxed);
+            // Experimental, read-only probe. This path is OFF by default and
+            // must only be enabled manually after matching the exact game build.
+            auto getActors = gGetRuntimeActorList.load(std::memory_order_acquire);
+            if (gActorEnumerationEnabled.load(std::memory_order_acquire) && getActors) {
+                try {
+                    const auto playerAddress = reinterpret_cast<std::uintptr_t>(event->player);
+                    auto* level = *reinterpret_cast<void**>(playerAddress + kPlayerLevelOffset);
+                    auto* actorManager = level
+                        ? *reinterpret_cast<void**>(reinterpret_cast<std::uintptr_t>(level) + kLevelActorManagerOffset)
+                        : nullptr;
+                    if (!actorManager) {
+                        gActorEnumerationFailures.fetch_add(1, std::memory_order_relaxed);
+                        gLastActorCount.store(0, std::memory_order_relaxed);
+                    } else {
+                        // BedrockTools internal Tablist/DebugMenu use this same
+                        // function type. Returned actor pointers are only counted
+                        // here; none are dereferenced or retained.
+                        const auto actors = getActors(actorManager);
+                        if (actors.size() > kMaxActorCount) {
+                            gActorEnumerationFailures.fetch_add(1, std::memory_order_relaxed);
+                            gLastActorCount.store(0, std::memory_order_relaxed);
+                        } else {
+                            std::uint64_t count = 0;
+                            for (const auto* actor : actors) if (actor) ++count;
+                            gLastActorCount.store(count, std::memory_order_relaxed);
+                            gActorEnumerationCalls.fetch_add(1, std::memory_order_relaxed);
+                        }
+                    }
+                } catch (...) {
+                    gActorEnumerationFailures.fetch_add(1, std::memory_order_relaxed);
+                    gLastActorCount.store(0, std::memory_order_relaxed);
+                }
+            }
+        }
     } else if (type == kGameModeAction) {
         const auto* event = static_cast<const GameModeActionPrefix*>(payload);
         gActions.fetch_add(1, std::memory_order_relaxed);
@@ -68,6 +112,8 @@ void releaseLocked() noexcept {
         if (gAttackSubscription) gApi->unsubscribe(gAttackSubscription);
     }
     gTickSubscription = gActionSubscription = gAttackSubscription = 0;
+    gActorEnumerationEnabled.store(false, std::memory_order_release);
+    gGetRuntimeActorList.store(nullptr, std::memory_order_release);
     gActorManagerListSignatureAvailable.store(false, std::memory_order_relaxed);
     gApi = nullptr;
     if (gHandle) dlclose(gHandle);
@@ -88,8 +134,9 @@ bool start() noexcept {
         return false;
     }
     // Read-only capability probe. Never invoke the resolved function here.
-    gActorManagerListSignatureAvailable.store(
-        gApi->resolveSignature(kActorManagerListSignatureId) != 0, std::memory_order_relaxed);
+    const auto actorListAddress = gApi->resolveSignature(kActorManagerListSignatureId);
+    gActorManagerListSignatureAvailable.store(actorListAddress != 0, std::memory_order_relaxed);
+    gGetRuntimeActorList.store(reinterpret_cast<GetRuntimeActorList>(actorListAddress), std::memory_order_release);
     gTickSubscription = gApi->subscribe(kLocalPlayerTick, kNormalPriority, onEvent, nullptr);
     gActionSubscription = gApi->subscribe(kGameModeAction, kNormalPriority, onEvent, nullptr);
     gAttackSubscription = gApi->subscribe(kAttack, kNormalPriority, onEvent, nullptr);
@@ -100,6 +147,12 @@ bool start() noexcept {
         return false;
     }
     return true;
+}
+void setActorEnumerationEnabled(bool enabled) noexcept {
+    const bool canEnable = enabled &&
+        gActorManagerListSignatureAvailable.load(std::memory_order_acquire) &&
+        gGetRuntimeActorList.load(std::memory_order_acquire) != nullptr;
+    gActorEnumerationEnabled.store(canEnable, std::memory_order_release);
 }
 void stop() noexcept {
     std::lock_guard lock(gMutex);
@@ -112,6 +165,10 @@ Snapshot snapshot() noexcept {
             gPlaces.load(std::memory_order_relaxed), gInteracts.load(std::memory_order_relaxed),
             gUses.load(std::memory_order_relaxed), gApi != nullptr,
             gTickSubscription != 0 && gActionSubscription != 0 && gAttackSubscription != 0,
-            gActorManagerListSignatureAvailable.load(std::memory_order_relaxed)};
+            gActorManagerListSignatureAvailable.load(std::memory_order_relaxed),
+            gActorEnumerationEnabled.load(std::memory_order_relaxed),
+            gActorEnumerationCalls.load(std::memory_order_relaxed),
+            gLastActorCount.load(std::memory_order_relaxed),
+            gActorEnumerationFailures.load(std::memory_order_relaxed)};
 }
 }
