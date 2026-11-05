@@ -13,9 +13,9 @@ A separate LeviLaunchroid `.levipack` target for a native creature-conversation 
 
 ## Not yet connected
 
-This is **not yet a complete CreatureChat port**. The current native PreLoader module does not yet connect the core to live Bedrock entity enumeration, chat events, AI HTTP requests, entity navigation/targeting, inventory transactions, particles, chat bubbles, GUI screens, multiplayer synchronization, or persistent world storage. Those switches are therefore disabled by default. No API key is accepted or stored until a secure request adapter exists.
+This is **not yet a complete CreatureChat port**. The current native PreLoader module does not yet connect the core to live Bedrock entity enumeration, chat events, AI HTTP requests, entity navigation/targeting, inventory transactions, particles, chat bubbles, GUI screens, multiplayer synchronization, or automatic persistent-memory lifecycle hooks. A bounded persistent world-memory file engine has been added, but it is not yet fed by live creature events or loaded/saved against an identified in-game world. Those switches therefore remain disabled by default. No API key is accepted or stored until a secure request adapter exists.
 
-The original CreatureChat project is a Java Fabric mod, not a Bedrock native plugin. Its documented feature set includes AI conversations, autonomous follow/flee/attack/protect behaviors, reactions, friendship, multiplayer sync, persistent memory, mob inventories, and advancements. This package reimplements a small native-safe core; it does not load the Java `.jar`.
+The pinned PreLoader Android SDK (0.2.2) exposes lifecycle, configuration, input callbacks, and low-level hook primitives, but not documented high-level Bedrock entity, chat, inventory, navigation, rendering, or multiplayer APIs. No game offsets or undocumented entity layouts are guessed. The original CreatureChat project is a Java Fabric mod, not a Bedrock native plugin; this package does not load the Java `.jar`.
 
 ## Package
 
