@@ -45,7 +45,9 @@ jobs:
             mobtalk-native/tests/persistence_test.cpp mobtalk-native/src/persistence.cpp mobtalk-native/src/mobtalk.cpp -o mobtalk_persistence_test
           ./mobtalk_persistence_test
           c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include \
-            mobtalk-native/tests/runtime_bridge_test.cpp mobtalk-native/src/runtime_bridge.cpp -ldl -pthread -o mobtalk_runtime_bridge_test
+            mobtalk-native/tests/runtime_bridge_test.cpp mobtalk-native/src/runtime_bridge.cpp \
+            mobtalk-native/src/entity_recognition.cpp mobtalk-native/src/entity_tracker.cpp \
+            mobtalk-native/src/entity_snapshot.cpp -ldl -pthread -o mobtalk_runtime_bridge_test
           ./mobtalk_runtime_bridge_test
 
   android-arm64:
@@ -98,7 +100,6 @@ jobs:
             cd dist/MobTalkNative
             zip -q ../mobtalk-native-arm64.levipack manifest.json libmobtalk_native.so
           )
-          # Verify both packages have their manifest and native library at ZIP root.
           unzip -Z1 dist/levimania-mobile-arm64.levipack | sort > /tmp/levimania-files.txt
           unzip -Z1 dist/mobtalk-native-arm64.levipack | sort > /tmp/mobtalk-files.txt
           grep -qx 'manifest.json' /tmp/levimania-files.txt
