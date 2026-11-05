@@ -1,6 +1,7 @@
 #include "mobtalk/ui.hpp"
 #include "mobtalk/mobtalk.hpp"
 #include "mobtalk/persistence.hpp"
+#include "mobtalk/runtime_bridge.hpp"
 #include <pl/Input.hpp>
 #include <pl/ModMenu.hpp>
 #include <algorithm>
@@ -64,11 +65,16 @@ void render() {
         status=g.status;
         if(!g.preview.history.empty()) last=g.preview.history.back().text;
     }
+    const auto bridge=runtime::snapshot();
+    const std::string bridgeState=(bridge.bedrockToolsAvailable && bridge.subscribed)
+        ? "Runtime bridge: connected" : "Runtime bridge: offline";
+    const std::string eventCounts="Events T/A/X: "+std::to_string(bridge.localPlayerTicks)+"/"+
+        std::to_string(bridge.gameModeActions)+"/"+std::to_string(bridge.attackEvents);
     std::vector<pl::modmenu::DrawCommand> commands;
     if(visible) {
         using Type=pl::modmenu::DrawCommandType;
         pl::modmenu::DrawCommand panel{};
-        panel.type=Type::RectFilled; panel.x=24; panel.y=56; panel.w=330; panel.h=206;
+        panel.type=Type::RectFilled; panel.x=24; panel.y=56; panel.w=330; panel.h=218;
         panel.color=0xE51B1B1Bu;
         commands.push_back(panel);
         auto addText=[&](float x,float y,float size,std::string text,std::uint32_t color) {
@@ -77,12 +83,14 @@ void render() {
             c.text=std::move(text); commands.push_back(std::move(c));
         };
         addText(38,68,19,"MobTalk Console",0xffffffffu);
-        addText(38,94,13,"Preview mode - no live mob is connected",0xffffcc66u);
-        addText(38,119,13,"Last local message:",0xffdddddd);
-        addText(38,139,13,last.empty()?"(none yet)":last,0xffffffffu);
-        addText(38,177,13,"Type below, then press Enter:",0xffdddddd);
-        addText(38,198,15,draft.empty()?"Tap keyboard to type...":draft,0xffaaffaa);
-        addText(38,235,11,status,0xffcccccc);
+        addText(38,91,12,"Preview mode - messages are not sent to mobs",0xffffcc66u);
+        addText(38,111,12,bridgeState,bridge.subscribed?0xff99ff99u:0xffffcc66u);
+        addText(38,129,11,eventCounts,0xffcccccc);
+        addText(38,151,12,"Last local message:",0xffdddddd);
+        addText(38,169,12,last.empty()?"(none yet)":last,0xffffffffu);
+        addText(38,194,12,"Type below, then press Enter:",0xffdddddd);
+        addText(38,212,14,draft.empty()?"Tap keyboard to type...":draft,0xffaaffaa);
+        addText(38,246,10,status,0xffcccccc);
     }
     pl::modmenu::submitDrawCommands("mobtalk_native.core",commands);
 }
