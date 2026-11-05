@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <queue>
+#include <utility>
 
 namespace levimania::ports {
 namespace {
@@ -54,6 +56,49 @@ float movementCost(MoveKind kind, const MovementCosts& c) noexcept {
     return 1000.0f;
 }
 
+
+RouteResult planWeightedRoute(const std::vector<RouteNode>& nodes, const std::vector<RouteEdge>& edges,
+                              std::uint16_t start, std::uint16_t goal, std::size_t maxNodes) {
+    RouteResult result;
+    const std::size_t limit = std::min<std::size_t>(maxNodes, 4096);
+    if (nodes.empty() || nodes.size() > limit || start >= nodes.size() || goal >= nodes.size()) return result;
+    std::vector<std::vector<std::pair<std::uint16_t,float>>> graph(nodes.size());
+    for (const auto& edge : edges) {
+        if (edge.from >= nodes.size() || edge.to >= nodes.size() ||
+            !(edge.cost >= 0.0f) || edge.cost > 100000.0f) continue;
+        graph[edge.from].push_back({edge.to, edge.cost});
+    }
+    const float infinity = std::numeric_limits<float>::infinity();
+    std::vector<float> distance(nodes.size(), infinity);
+    std::vector<std::uint16_t> previous(nodes.size(), std::numeric_limits<std::uint16_t>::max());
+    using Entry = std::pair<float,std::uint16_t>;
+    std::priority_queue<Entry,std::vector<Entry>,std::greater<Entry>> open;
+    distance[start]=0.0f; open.push({0.0f,start});
+    std::size_t visited=0;
+    while (!open.empty() && visited < limit) {
+        const auto [cost,current]=open.top(); open.pop();
+        if (cost != distance[current]) continue;
+        ++visited;
+        if (current == goal) break;
+        for (const auto& [next,weight] : graph[current]) {
+            const float candidate=cost+weight;
+            if (candidate < distance[next]) {
+                distance[next]=candidate; previous[next]=current; open.push({candidate,next});
+            }
+        }
+    }
+    if (!std::isfinite(distance[goal])) return result;
+    std::vector<std::uint16_t> reverse;
+    for (std::uint16_t at=goal;;at=previous[at]) {
+        reverse.push_back(at);
+        if (at==start) break;
+        if (previous[at] == std::numeric_limits<std::uint16_t>::max() || reverse.size()>limit) return {};
+    }
+    result.nodes.assign(reverse.rbegin(),reverse.rend());
+    result.totalCost=distance[goal]; result.found=true;
+    return result;
+}
+
 void observeAction(ActionMemory& memory, PlayerAction action) noexcept {
     const auto index = static_cast<std::size_t>(action);
     if (index >= memory.counts.size()) return;
@@ -89,6 +134,20 @@ CompanionCommand parseCompanionCommand(std::string_view request) noexcept {
     return CompanionCommand::Unknown;
 }
 
+
+bool enqueueCompanionTask(CompanionTaskQueue& queue, CompanionCommand command) noexcept {
+    if (command == CompanionCommand::Unknown || queue.count >= queue.tasks.size()) return false;
+    queue.tasks[queue.count++] = command;
+    return true;
+}
+CompanionCommand dequeueCompanionTask(CompanionTaskQueue& queue) noexcept {
+    if (queue.count == 0) return CompanionCommand::Unknown;
+    const auto result=queue.tasks[0];
+    for (std::size_t i=1;i<queue.count;++i) queue.tasks[i-1]=queue.tasks[i];
+    --queue.count;
+    return result;
+}
+
 const std::array<TechniqueSpec, 14>& cursedTechniques() noexcept {
     static constexpr std::array<TechniqueSpec, 14> techniques{{
         {"impact_burst", 12.0f, 2.0f, 4}, {"reinforced_strike", 18.0f, 4.0f, 4},
@@ -100,6 +159,24 @@ const std::array<TechniqueSpec, 14>& cursedTechniques() noexcept {
         {"domain_expansion", 80.0f, 45.0f, 1}, {"maximum_technique", 100.0f, 60.0f, 1}
     }};
     return techniques;
+}
+
+
+void tickTechniqueCooldowns(TechniqueRuntime& runtime, float deltaSeconds) noexcept {
+    const float dt = std::isfinite(deltaSeconds) ? std::clamp(deltaSeconds,0.0f,10.0f) : 0.0f;
+    runtime.energy = std::isfinite(runtime.energy) ? std::clamp(runtime.energy,0.0f,100.0f) : 0.0f;
+    for (auto& cooldown : runtime.cooldowns)
+        cooldown = std::isfinite(cooldown) ? std::max(0.0f,cooldown-dt) : 0.0f;
+}
+bool castTechnique(TechniqueRuntime& runtime, std::size_t techniqueIndex) noexcept {
+    const auto& techniques=cursedTechniques();
+    if (techniqueIndex >= techniques.size()) return false;
+    tickTechniqueCooldowns(runtime,0.0f);
+    const auto& spec=techniques[techniqueIndex];
+    if (runtime.cooldowns[techniqueIndex] > 0.0f || runtime.energy < spec.energyCost) return false;
+    runtime.energy -= spec.energyCost;
+    runtime.cooldowns[techniqueIndex] = spec.cooldownSeconds;
+    return true;
 }
 
 bool startMineRun(MineRun& run) noexcept {
