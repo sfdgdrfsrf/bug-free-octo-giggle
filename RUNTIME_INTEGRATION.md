@@ -2,13 +2,13 @@
 
 ## Target and safety rule
 
-The requested target is Minecraft Bedrock Android 26.62, arm64-v8a, loaded by LeviLaunchroid. The target is not runtime-verified. A successful Android compile only proves that the native libraries link; it does not prove that a Bedrock object layout, signature, vtable, event payload, or callback lifetime is valid in 26.62.
+The observed target is Minecraft Bedrock Android 26.60, arm64-v8a, loaded by LeviLaunchroid, with BedrockTools v1.5.10 shown in the user's screenshot. The exact game binary/build ID and target runtime are not verified. A successful Android compile only proves that the native libraries link; it does not prove that a Bedrock object layout, signature, vtable, event payload, or callback lifetime is valid in 26.60.
 
 All gameplay integrations must fail closed unless the runtime adapter reports a verified game build and the required capability. No guessed offsets, raw actor-manager traversal, retained game pointers, or world writes are allowed.
 
 ## Verified public integration surface inspected
 
-The user reports having the latest BedrockTools installed. The latest public release inspected for this work is **BedrockTools v1.5.10** (release tag `v1.5.10`, SDK ABI v1). The tagged v1.5.10 headers were checked directly; they match the event/API declarations described below. This identifies the public target we are integrating against, but does not independently inspect the user's installed binary or prove Minecraft 26.62 compatibility.
+The user reports having the latest BedrockTools installed. The latest public release inspected for this work is **BedrockTools v1.5.10** (release tag `v1.5.10`, SDK ABI v1). The tagged v1.5.10 headers were checked directly; they match the event/API declarations described below. This identifies the public target we are integrating against, but does not independently inspect the user's installed binary or prove Minecraft 26.60 compatibility.
 
 The public BedrockTools source currently exposes an ABI-v1 table with:
 - ABI version and structure size;
@@ -47,9 +47,9 @@ The BedrockTools source tree contains a concrete internal implementation pattern
 
 This is stronger evidence than a guessed iterator. It is still an **internal BedrockTools implementation detail**, not a stable public SDK method. The public ABI's generic signature resolver can resolve ordinal 12, but ABI v1 does not report the BedrockTools release or Minecraft build. Therefore the current MobTalk bridge only checks whether the signature resolves. It does not call it, dereference the Level/actor-manager offsets, or retain Actor pointers.
 
-MobTalk now includes an **experimental actor-count probe**, exposed as the `actor_enumeration_probe` setting in the MobTalk module. It is OFF by default. When a user explicitly enables it, the bridge calls the same internal function pattern used by BedrockTools Tablist, during the LocalPlayerTick callback, and counts non-null entries only. It does not inspect or retain actor pointers, positions, components, names, or inventory. It rejects lists larger than 4,096 entries and records failures. This is a deliberately narrow smoke test, not full entity identity integration.
+MobTalk contains an experimental actor-count probe in source, but it is **hard-locked OFF in code** (`kActorProbeRuntimeValidated=false`). No config setting can enable it. The bridge only checks whether the signature resolves; it does not call the function or inspect actor pointers. This is a deliberately narrow smoke test, not full entity identity integration.
 
-The probe still reads the version-specific `Actor::mLevel` and `Level::mActorManager` offsets and invokes an internal C++ function returning `std::vector<void*>`. Since BedrockTools ABI v1 does not expose a Minecraft build ID or a stable iterator contract, manually enabling this probe on an unsupported game build may crash. Keep it OFF unless testing on a backed-up disposable world with a confirmed matching BedrockTools/game build.
+The disabled probe's implementation contains version-specific `Actor::mLevel` and `Level::mActorManager` offsets and an internal C++ function returning `std::vector<void*>`. Since BedrockTools ABI v1 does not expose a Minecraft build ID or a stable iterator contract, it must remain locked until exact binary and ABI validation.
 
 The next full runtime implementation must still follow these rules:
 1. Require an explicit runtime build allowlist and a matching BedrockTools signature-table revision.
@@ -60,28 +60,28 @@ The next full runtime implementation must still follow these rules:
 6. Never cache Actor pointers, vector storage, component pointers, or string references after the callback.
 7. If any prerequisite is missing, return an empty snapshot and keep gameplay features disabled.
 
-**Not yet verified:** Minecraft 26.62 has not been verified against the exact Android game binary. The candidate signature resolving in BedrockTools does not by itself prove that its offsets or function ABI are valid for 26.62. The actor-count probe is shipped disabled by default; a user must explicitly enable it to invoke the internal function. Full actor snapshots and gameplay use remain disabled.
+**Not yet verified:** Minecraft 26.60 has not been verified against the exact Android game binary. The candidate signature resolving in BedrockTools does not by itself prove that its offsets or function ABI are valid for 26.60. The actor-count probe is shipped disabled by default; a user must explicitly enable it to invoke the internal function. Full actor snapshots and gameplay use remain disabled.
 
 ## Subsystem integration matrix
 
 | System | Public surface found | Current safe status | Missing proof/API |
 |---|---|---|---|
-| Entity discovery and identity | LocalPlayerTick plus internal ActorManagerList pattern | Opt-in actor count only; no actor data copied | 26.62 object-layout/signature validation; supported iterator contract; stable identity and pointer lifetime rules |
+| Entity discovery and identity | LocalPlayerTick plus internal ActorManagerList pattern | Opt-in actor count only; no actor data copied | 26.60 object-layout/signature validation; supported iterator contract; stable identity and pointer lifetime rules |
 | Inventory | BedrockTools has inventory offset constants and an internal InventoryAccess implementation | Not connected | Supported external inventory API, slot/item lifetime rules, transaction authority, build validation |
 | Movement/navigation | Movement input component layout and player tick event | Planner core only | Supported actor movement/command API, collision/world queries, game-thread contract |
-| Rendering | Public render offsets and renderer wrappers | No custom entity rendering | Stable render callback/context, resource lifetime, 26.62 offsets and renderer validation |
+| Rendering | Public render offsets and renderer wrappers | No custom entity rendering | Stable render callback/context, resource lifetime, 26.60 offsets and renderer validation |
 | Chat | MobTalk local HUD/input and transcript persistence | Local preview only | Incoming chat event, safe outbound chat API, entity chat bubble/render hook, multiplayer semantics |
 | World/block interaction | GameModeAction event observes player actions | Telemetry only | Read/write block API, inventory transaction API, permission/authority semantics |
 
 ## Required staged implementation
 
 1. **Runtime identity gate:** obtain a runtime-provided Minecraft build identifier and ABI/capability version. Refuse gameplay hooks when the build is not explicitly allowlisted. BedrockTools ABI v1 as inspected does not expose a game-build identifier, so its presence alone is insufficient.
-2. **Read-only local-player adapter:** validate the 26.62 signature and callback thread/lifetime rules, then copy only bounded scalar data into pointer-free snapshots during the callback. Never store Actor/Player pointers.
+2. **Read-only local-player adapter:** validate the 26.60 signature and callback thread/lifetime rules, then copy only bounded scalar data into pointer-free snapshots during the callback. Never store Actor/Player pointers.
 3. **Entity enumeration:** require an official iterator or a separately verified, version-pinned adapter. Do not walk the opaque actorManager pointer.
 4. **Inventory and world queries:** require typed APIs with explicit ownership, bounds, and game-thread rules. Read-only inventory inspection precedes any transaction or mutation.
 5. **Movement and actions:** add one action at a time behind opt-in toggles, with range/collision checks, cancellation, and a no-op mode.
 6. **Rendering and chat:** validate render-thread callback/context and chat send/receive APIs independently; neither may be inferred from HUD drawing or action events.
-7. **Device validation:** test on a backed-up disposable world with the exact Minecraft 26.62 Android binary and installed LeviLaunchroid/BedrockTools versions. Run read-only first, then each mutation capability separately.
+7. **Device validation:** test on a backed-up disposable world with the exact Minecraft 26.60 Android binary and installed LeviLaunchroid/BedrockTools versions. Run read-only first, then each mutation capability separately.
 
 ## Current implementation truth
 
