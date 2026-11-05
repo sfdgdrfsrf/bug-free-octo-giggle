@@ -35,4 +35,4 @@ Some reference projects have restrictive licenses. Their protected source code, 
 
 ## Build
 
-GitHub Actions cross-compiles for Android ARM64 and packages the native shared library with `manifest.json` into a `.levipack`.
+GitHub Actions cross-compiles both native ARM64 mods and publishes separate `levimania-mobile-arm64.levipack` and `mobtalk-native-arm64.levipack` artifacts. Each archive is verified to contain `manifest.json` and its `.so` at the ZIP root (not nested inside a directory). MobTalk currently provides a local preview console and optional BedrockTools player-action telemetry; it is not yet a live creature-chat/AI controller.
