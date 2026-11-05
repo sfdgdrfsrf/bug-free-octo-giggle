@@ -37,6 +37,8 @@ jobs:
           ./mobtalk_test
           c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include mobtalk-native/tests/entity_snapshot_test.cpp mobtalk-native/src/entity_snapshot.cpp -pthread -o mobtalk_entity_snapshot_test
           ./mobtalk_entity_snapshot_test
+          c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include mobtalk-native/tests/entity_tracker_test.cpp mobtalk-native/src/entity_tracker.cpp mobtalk-native/src/entity_snapshot.cpp -o mobtalk_entity_tracker_test
+          ./mobtalk_entity_tracker_test
           c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include \
             mobtalk-native/tests/persistence_test.cpp mobtalk-native/src/persistence.cpp mobtalk-native/src/mobtalk.cpp -o mobtalk_persistence_test
           ./mobtalk_persistence_test
