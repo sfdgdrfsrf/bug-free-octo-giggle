@@ -12,7 +12,7 @@ target_link_libraries(levimania_mobile PRIVATE preloader log)
 target_compile_options(levimania_mobile PRIVATE -Wall -Wextra -Wpedantic)
 set_target_properties(levimania_mobile PROPERTIES OUTPUT_NAME "levimania_mobile" CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
 
-add_library(mobtalk_native SHARED mobtalk-native/src/main.cpp mobtalk-native/src/mobtalk.cpp mobtalk-native/src/persistence.cpp mobtalk-native/src/ui.cpp mobtalk-native/src/runtime_bridge.cpp mobtalk-native/src/entity_snapshot.cpp)
+add_library(mobtalk_native SHARED mobtalk-native/src/main.cpp mobtalk-native/src/mobtalk.cpp mobtalk-native/src/persistence.cpp mobtalk-native/src/ui.cpp mobtalk-native/src/runtime_bridge.cpp mobtalk-native/src/entity_snapshot.cpp mobtalk-native/src/entity_tracker.cpp)
 target_include_directories(mobtalk_native PRIVATE mobtalk-native/include)
 target_link_libraries(mobtalk_native PRIVATE preloader log dl)
 target_compile_options(mobtalk_native PRIVATE -Wall -Wextra -Wpedantic)
