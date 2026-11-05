@@ -35,6 +35,9 @@ jobs:
           c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include \
             mobtalk-native/tests/mobtalk_test.cpp mobtalk-native/src/mobtalk.cpp -o mobtalk_test
           ./mobtalk_test
+          c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Imobtalk-native/include \
+            mobtalk-native/tests/persistence_test.cpp mobtalk-native/src/persistence.cpp mobtalk-native/src/mobtalk.cpp -o mobtalk_persistence_test
+          ./mobtalk_persistence_test
 
   android-arm64:
     runs-on: ubuntu-latest
@@ -42,28 +45,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
-
       - name: Install Android CMake and NDK
         shell: bash
         run: |
           set -euo pipefail
           sdkmanager --install "cmake;3.22.1" "ndk;28.2.13676358"
           sdkmanager --list_installed
-
       - name: Install Ninja
         run: sudo apt-get update && sudo apt-get install -y ninja-build
-
       - name: Configure
         run: >
           cmake -S . -B build
@@ -72,10 +70,8 @@ jobs:
           -DANDROID_PLATFORM=android-28
           -DCMAKE_BUILD_TYPE=Release
           -G Ninja
-
       - name: Build
         run: cmake --build build --parallel
-
       - name: Package .levipack
         run: |
           set -euo pipefail
@@ -88,7 +84,6 @@ jobs:
           cd dist
           zip -r levimania-mobile-arm64.levipack LeviManiaMobile
           zip -r mobtalk-native-arm64.levipack MobTalkNative
-
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
