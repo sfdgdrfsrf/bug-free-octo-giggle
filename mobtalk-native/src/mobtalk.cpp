@@ -49,7 +49,7 @@ ParsedReply parseReply(std::string_view text) {
         bool hasArg = false;
         if (split != std::string::npos) {
             auto argText = std::string_view(token).substr(split+1);
-            while (!argText.empty() && (argText.front()==' ' || argText.front()==':' || argText.front()=='\\t')) argText.remove_prefix(1);
+            while (!argText.empty() && (argText.front()==' ' || argText.front()==':' || argText.front()=='\t')) argText.remove_prefix(1);
             hasArg = parseInt(argText, argument);
         }
         result.behaviors.push_back(behavior);
