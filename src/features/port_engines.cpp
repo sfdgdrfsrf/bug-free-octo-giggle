@@ -1,6 +1,8 @@
 #include "levimania/port_engines.hpp"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
+#include <functional>
 #include <limits>
 #include <queue>
 #include <utility>
