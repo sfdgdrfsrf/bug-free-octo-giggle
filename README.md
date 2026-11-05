@@ -2,9 +2,17 @@
 
 Native ARM64 LeviLaunchroid mod for Minecraft Bedrock Android. The deliverable is a `.levipack` containing the native shared library and manifest, not an APK or Java mod jar.
 
+## Stability and safety
+
+- All unfinished gameplay modules are **disabled by default**. The loader/menu scaffold can be enabled without opting into experimental gameplay.
+- Pathfinding input is bounded to a maximum 262,144 cells and rejects invalid dimensions/coordinates before allocating or indexing.
+- Numeric simulation inputs are checked for non-finite values and clamped to safe ranges.
+- A host-native safety test suite runs before the Android package job. If tests fail, the ARM64 package job is blocked.
+- CI compilation and unit tests do not replace an actual in-game smoke test. No claim of crash-free gameplay is made until the exact package is tested with the target LeviLaunchroid and Minecraft versions.
+
 ## 1:1 native port goal
 
-The six requested ports are being treated as feature-parity targets, not loose inspirations:
+The six requested ports are feature-parity targets, not loose inspirations:
 
 - **Personalized:** UUID/seed-based client-side randomization, mob model variants, item swaps, creative inventory shuffle, block swaps, and source-style configuration.
 - **Baritone:** goal types, segmented pathfinding, movement and hazard costs, chunk caching, tool-aware mining, block placement, construction/schematic assistance, follow, waypoints, settings, and commands.
@@ -17,9 +25,9 @@ See [PORT_PARITY.md](PORT_PARITY.md) for source references, detailed acceptance 
 
 ## Current status — foundation only
 
-The repository currently contains prototype data models and planning logic, not six completed gameplay ports. A basic four-direction A* routine, stat-scaling formula, companion bond/stamina model, cursed-energy resource checks, and mine encounter threshold are not considered feature parity. Every feature must be connected to verified Bedrock runtime APIs and pass in-game tests before being marked complete.
+The repository contains prototype data models and planning logic, not six completed gameplay ports. A basic bounded grid A*, stat-adaptation formula, companion bond/stamina model, cursed-energy resource checks, and mine encounter threshold are not feature parity. Each feature must be connected to verified Bedrock runtime APIs and pass in-game tests before being marked complete.
 
-## Runtime and safety
+## Runtime and safety constraints
 
 This is a native C++ port, not a Java/Fabric/Forge jar loader. Java bytecode and Java-only APIs do not run inside LeviLaunchroid. Behavior must be independently implemented against verified PreLoader/LeviLaunchroid and Bedrock APIs. Do not use guessed offsets or unsupported game calls. Where a Bedrock API cannot safely provide an exact behavior, document the limitation rather than faking it.
 
