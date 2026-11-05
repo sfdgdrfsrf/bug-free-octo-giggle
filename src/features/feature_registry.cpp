@@ -3,12 +3,12 @@
 namespace levimania::features {
 const std::vector<FeatureInfo>& planned_features() {
     static const std::vector<FeatureInfo> features{
-        {"world_personalization", "World Personalization", "planned"},
-        {"pathfinding", "Pathfinding and Mining", "planned"},
-        {"adaptive_mobs", "Adaptive Mob Behaviors", "planned"},
-        {"companions", "Companions", "planned"},
-        {"cursed_combat", "Cursed Combat Techniques", "planned"},
-        {"mining_encounters", "Mining Encounters", "planned"}
+        {"world_personalization", "World Personalization", "core-logic"},
+        {"pathfinding", "Pathfinding and Mining", "core-logic"},
+        {"adaptive_mobs", "Adaptive Mob Behaviors", "core-logic"},
+        {"companions", "Companions", "core-logic"},
+        {"cursed_combat", "Cursed Combat Techniques", "core-logic"},
+        {"mining_encounters", "Mining Encounters", "core-logic"}
     };
     return features;
 }
