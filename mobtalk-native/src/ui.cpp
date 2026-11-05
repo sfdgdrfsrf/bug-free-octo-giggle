@@ -72,6 +72,11 @@ void render() {
         std::to_string(bridge.blockBreakActions)+"/"+std::to_string(bridge.blockPlaceActions);
     const std::string eventCounts2="Interact / use / attack: "+std::to_string(bridge.interactActions)+"/"+
         std::to_string(bridge.itemUseActions)+"/"+std::to_string(bridge.attackEvents);
+    const std::string entityProbe = bridge.actorEnumerationEnabled
+        ? "Actor count probe: ON ("+std::to_string(bridge.lastActorCount)+", calls "+std::to_string(bridge.actorEnumerationCalls)+")"
+        : (bridge.actorManagerListSignatureAvailable
+            ? "Actor list signature found; enumeration OFF"
+            : "Actor list signature unavailable");
     std::vector<pl::modmenu::DrawCommand> commands;
     if(visible) {
         using Type=pl::modmenu::DrawCommandType;
@@ -146,6 +151,7 @@ void onButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
 } // namespace
 
 bool registerConsole(pl::mod::ModContext& context) {
+    runtime::setActorEnumerationEnabled(false);
     {
         std::lock_guard lock(g.mutex);
         g.enabled=true; g.open=false; g.persist=false; g.draft.clear();
@@ -159,8 +165,11 @@ bool registerConsole(pl::mod::ModContext& context) {
         .description("Native conversation core and local HUD console; live entity bridge unavailable.")
         .modId(context.id()).defaultEnabled(true)
         .config("chat_memory","Save local console transcript",pl::modmenu::ConfigType::Toggle,"false")
+        .config("actor_enumeration_probe","EXPERIMENTAL: count loaded actors (read-only; may crash on unsupported game builds)",pl::modmenu::ConfigType::Toggle,"false")
         .onConfigChanged([](std::string_view,std::string_view key,std::string_view value) {
-            if(key=="chat_memory") {
+            if(key=="actor_enumeration_probe") {
+                runtime::setActorEnumerationEnabled(value=="true" || value=="1");
+            } else if(key=="chat_memory") {
                 std::lock_guard lock(g.mutex);
                 g.persist=(value=="true" || value=="1");
                 if(g.persist) {
@@ -185,6 +194,7 @@ bool registerConsole(pl::mod::ModContext& context) {
     return module && button;
 }
 void unregisterConsole() noexcept {
+    runtime::setActorEnumerationEnabled(false);
     {
         std::lock_guard lock(g.mutex);
         g.enabled=false; g.open=false; g.draft.clear();
