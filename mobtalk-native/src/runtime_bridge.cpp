@@ -68,6 +68,7 @@ void releaseLocked() noexcept {
         if (gAttackSubscription) gApi->unsubscribe(gAttackSubscription);
     }
     gTickSubscription = gActionSubscription = gAttackSubscription = 0;
+    gActorManagerListSignatureAvailable.store(false, std::memory_order_relaxed);
     gApi = nullptr;
     if (gHandle) dlclose(gHandle);
     gHandle = nullptr;
