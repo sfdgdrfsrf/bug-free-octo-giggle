@@ -1,0 +1,8 @@
+{
+  "type": "preload-native",
+  "name": "LeviMania Mobile",
+  "author": "sfdgdrfsrf",
+  "version": "0.1.0",
+  "entry": "liblevimania_mobile.so",
+  "minecraft_versions": []
+}
