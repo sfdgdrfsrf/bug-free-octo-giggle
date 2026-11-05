@@ -38,6 +38,9 @@ std::atomic<std::uint64_t> gActorEnumerationCalls{0}, gLastActorCount{0}, gActor
 constexpr std::uintptr_t kPlayerLevelOffset = 0x1F0;
 constexpr std::uintptr_t kLevelActorManagerOffset = 0x478;
 constexpr std::size_t kMaxActorCount = 4096;
+// No exact 26.62 binary/offset validation has been completed. Keep the
+// internal actor-list invocation hard-locked even if a config toggle is set.
+constexpr bool kActorProbeRuntimeValidated = false;
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
 std::atomic<std::uint64_t> gBreaks{0}, gPlaces{0}, gInteracts{0}, gUses{0};
 
@@ -149,7 +152,7 @@ bool start() noexcept {
     return true;
 }
 void setActorEnumerationEnabled(bool enabled) noexcept {
-    const bool canEnable = enabled &&
+    const bool canEnable = kActorProbeRuntimeValidated && enabled &&
         gActorManagerListSignatureAvailable.load(std::memory_order_acquire) &&
         gGetRuntimeActorList.load(std::memory_order_acquire) != nullptr;
     gActorEnumerationEnabled.store(canEnable, std::memory_order_release);
