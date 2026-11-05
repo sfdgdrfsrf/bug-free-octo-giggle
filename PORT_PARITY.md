@@ -27,9 +27,10 @@ Implemented native core:
 - bounded per-creature memory/context and friendship;
 - allow-listed behavior-marker parsing and intent classification;
 - bounded binary persistence engine;
-- real PreLoader HUD draw-command overlay, on-screen Talk button, and Android keyboard input callback;
-- local preview transcript save/load in the mod data directory.
+- real PreLoader HUD draw-command overlay and Android keyboard input callback;
+- optional BedrockTools API ABI v1 bridge for local-player tick, game-mode action, and attack notifications;
+- local preview transcript save/load.
 
-The console is a genuine live PreLoader UI/input integration, but it is **not** a Bedrock chat bridge: submitted messages remain local preview text and are not delivered to entities. The current SDK's documented public surface includes lifecycle, configuration, input callbacks, HUD draw commands, on-screen buttons, and low-level hook primitives. It does not document high-level Bedrock entity enumeration, chat events, inventory transactions, navigation, world-space rendering, or multiplayer APIs.
+The optional event bridge is a real runtime subscription, but not a creature-control bridge. It does not enumerate nearby entities, read entity identities, or issue movement/inventory/render commands. Submitted chat remains local preview text, not a game chat event or creature response.
 
-Still missing for full CreatureChat behavior: live entity discovery and chat send/receive; secure AI HTTP adapter and key management; entity follow/flee/attack/protect navigation; inventory transactions; world-space particles and entity-attached chat bubbles; native screen UI beyond the HUD overlay; multiplayer synchronization; and automatic per-world persistence hooks. These remain disabled. No undocumented offsets are guessed and no Java/Fabric bytecode is loaded.
+Still missing for full CreatureChat behavior: nearby entity enumeration; player chat send/receive; secure AI HTTP adapter and key management; entity follow/flee/attack/protect navigation; inventory transactions; world-space particles and entity-attached chat bubbles; dedicated native chat UI; multiplayer synchronization; and automatic per-world persistence hooks. These remain disabled. The bridge fails closed if BedrockTools API ABI v1 is absent/incompatible. No undocumented offsets are guessed and no Java/Fabric bytecode is loaded.
