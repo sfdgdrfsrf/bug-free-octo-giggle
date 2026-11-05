@@ -124,7 +124,7 @@ bool extractMineRun(MineRun& run) noexcept {
     run.phase = MinePhase::Completed;
     return true;
 }
-bool failMineRun(MineRun& run) noexcept {
+bool returnToMineHub(MineRun& run) noexcept {\n    if (run.phase != MinePhase::Completed && run.phase != MinePhase::Failed) return false;\n    run.phase = MinePhase::Hub;\n    return true;\n}\nbool failMineRun(MineRun& run) noexcept {
     if (run.phase != MinePhase::Exploring) return false;
     run.phase = MinePhase::Failed;
     run.copper = 0;
@@ -132,13 +132,13 @@ bool failMineRun(MineRun& run) noexcept {
     return true;
 }
 bool purchaseMineGear(MineRun& run, std::uint32_t cost) noexcept {
-    if (run.phase != MinePhase::Hub || cost == 0 || run.wallet < cost) return false;
+    if ((run.phase != MinePhase::Hub && run.phase != MinePhase::Completed) || cost == 0 || run.wallet < cost) return false;
     run.wallet -= cost;
     saturatingAdd(run.gearTier, 1);
     return true;
 }
 bool unlockNextMineLevel(MineRun& run) noexcept {
-    if (run.phase != MinePhase::Hub || run.level >= 5 || run.gearTier < run.level) return false;
+    if ((run.phase != MinePhase::Hub && run.phase != MinePhase::Completed) || run.level >= 5 || run.gearTier < run.level) return false;
     ++run.level;
     return true;
 }
