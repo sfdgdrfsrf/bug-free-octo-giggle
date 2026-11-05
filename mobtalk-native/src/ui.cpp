@@ -19,6 +19,7 @@ struct State {
     std::mutex mutex;
     bool enabled{false};
     bool open{false};
+    bool persist{false};
     std::string draft;
     std::string status{"No creature runtime bridge connected"};
     std::filesystem::path savePath;
@@ -101,8 +102,8 @@ bool onKey(const pl::input::KeyEvent& event) {
             if(!g.draft.empty()) {
                 appendChat(g.preview,ChatLine{true,"Player",g.draft,nowMs()});
                 g.draft.clear();
-                g.status="Saved locally - no live mob received this message";
-                snapshot.push_back(g.preview); path=g.savePath; submitted=true;
+                g.status="Local preview only - no live mob received this message";
+                if(g.persist) { snapshot.push_back(g.preview); path=g.savePath; submitted=true; }
             }
             handled=true;
         } else if(event.unicodeChar>=32 && event.unicodeChar<=0x10ffffu &&
@@ -112,10 +113,8 @@ bool onKey(const pl::input::KeyEvent& event) {
     }
     if(submitted) {
         const bool saved=saveWorldMemory(path,snapshot);
-        if(!saved) {
-            std::lock_guard lock(g.mutex);
-            g.status="Local save failed - message remains in memory";
-        }
+        std::lock_guard lock(g.mutex);
+        g.status=saved ? "Local preview saved - no mob received it" : "Local save failed - message remains in memory";
     }
     if(handled) render();
     return handled;
@@ -137,7 +136,7 @@ void onButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
 bool registerConsole(pl::mod::ModContext& context) {
     {
         std::lock_guard lock(g.mutex);
-        g.enabled=true; g.open=false; g.draft.clear();
+        g.enabled=true; g.open=false; g.persist=false; g.draft.clear();
         g.savePath=context.dataDir()/"mobtalk-local-console.mtmem";
         g.preview=CreatureMemory{};
         g.preview.creatureId="local-console-preview";
@@ -151,7 +150,13 @@ bool registerConsole(pl::mod::ModContext& context) {
     const bool module=pl::modmenu::ModuleBuilder("mobtalk_native.core","MobTalk Native")
         .description("Native conversation core and local HUD console; live entity bridge unavailable.")
         .modId(context.id()).defaultEnabled(true)
-        .config("chat_memory","Local console transcript persistence",pl::modmenu::ConfigType::Toggle,"true")
+        .config("chat_memory","Save local console transcript",pl::modmenu::ConfigType::Toggle,"false")
+        .onConfigChanged([](std::string_view,std::string_view key,std::string_view value) {
+            if(key=="chat_memory") {
+                std::lock_guard lock(g.mutex);
+                g.persist=(value=="true" || value=="1");
+            }
+        })
         .config("behavior_tags","Live creature behavior actions (requires verified Bedrock bridge)",pl::modmenu::ConfigType::Toggle,"false")
         .config("llm_requests","External AI requests (secure adapter not implemented)",pl::modmenu::ConfigType::Toggle,"false")
         .config("friendship","Live creature friendship (requires entity identity bridge)",pl::modmenu::ConfigType::Toggle,"false")
