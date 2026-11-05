@@ -96,7 +96,7 @@ void render() {
         addText(38,68,19,scannerVisible?"MobTalk Entity Scanner":"MobTalk Console",0xffffffffu);
         if(scannerVisible) {
             addText(38,91,12,"Nearby registry: "+std::to_string(nearby.count)+" entities",0xff99ff99u);
-            addText(38,109,10,bridge.worldSessionSeen ? "World detected; auto-scan session active" : "Waiting for world/player tick",bridge.worldSessionSeen?0xff99ff99u:0xffffcc66u);
+            addText(38,109,10,bridge.worldSessionSeen ? "World detected (player tick received)" : "Waiting for world/player tick",bridge.worldSessionSeen?0xff99ff99u:0xffffcc66u);
             addText(38,123,10,"Entity feed: awaiting verified enumerator",0xffffcc66u);
             const std::size_t shown=std::min<std::size_t>(nearby.count,10);
             for(std::size_t i=0;i<shown;++i) {
