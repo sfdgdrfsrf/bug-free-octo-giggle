@@ -164,6 +164,7 @@ void onButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
         std::lock_guard lock(g.mutex);
         if(!g.enabled) return;
         g.open=!g.open; open=g.open;
+        if(g.open) g.scannerOpen=false;
     }
     if(open) pl::input::showKeyboard();
     else pl::input::hideKeyboard();
