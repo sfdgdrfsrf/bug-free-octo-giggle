@@ -11,7 +11,7 @@ The observed target is **Minecraft Bedrock Android 26.60 (arm64-v8a)** with **Be
 - Per-creature identity/personality, bounded conversation history, friendship, and allow-listed behavior-marker parsing.
 - Bounded conversation-context construction and player-intent classification.
 - Bounded binary memory storage with version/size checks and failure-safe loading.
-- Native PreLoader HUD console, on-screen Talk button, Android keyboard input callback, and a read-only Nearby Entities list panel.
+- Native PreLoader HUD console, on-screen Talk button, Android keyboard input callback, and a read-only Nearby Entities list panel. The panel automatically marks a world session active after the first local-player tick.
 - Local preview transcript save/load under the mod data directory.
 - Optional runtime event bridge to BedrockTools API ABI v1: local-player tick, game-mode action, and attack subscriptions, with block-break/place, interaction, and item-use counters. It safely fails closed if BedrockTools is not installed or its API is incompatible.
 - Read-only availability check for BedrockTools v1.5.10's `ActorManagerList` signature (SignatureId ordinal 12). The actor-count probe is **hard-locked OFF in code** and cannot be enabled by config; it is not invoked.
@@ -41,4 +41,4 @@ The root workflow builds `mobtalk-native-arm64.levipack` separately from `levima
 
 The referenced CreatureChat repository identifies source code as GPL-3.0-or-later and non-code assets as CC-BY-NC-SA-4.0, with separate trademark restrictions. This native implementation does not bundle its code or protected assets. See `LICENSE-NOTICE.md`; no endorsement is implied.
 
-- Entity recognition pipeline: verified adapters can submit pointer-free frames, maintain a bounded nearby-creature list, assign session-only target IDs, and look up the selected creature. The new Nearby Entities panel displays up to 10 entries from this registry. It currently reports an empty/waiting state because no verified Bedrock actor adapter feeds the pipeline yet; opening the panel does not falsely claim that game entities were scanned.
+- Entity recognition pipeline: verified adapters can submit pointer-free frames, maintain a bounded nearby-creature list, assign session-only target IDs, and look up the selected creature. The new Nearby Entities panel displays up to 10 entries from this registry. It automatically detects the local-player tick/world-session signal, but reports an empty/waiting state because no verified Bedrock actor adapter feeds the pipeline yet; opening the panel does not falsely claim that game entities were scanned.
