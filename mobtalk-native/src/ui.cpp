@@ -141,10 +141,6 @@ bool registerConsole(pl::mod::ModContext& context) {
         g.preview=CreatureMemory{};
         g.preview.creatureId="local-console-preview";
         g.preview.personality="UI preview only; not bound to a Bedrock entity";
-        std::vector<CreatureMemory> loaded;
-        if(loadWorldMemory(g.savePath,loaded) && !loaded.empty() &&
-           loaded.front().creatureId=="local-console-preview")
-            g.preview=std::move(loaded.front());
         g.status="No live Bedrock entity/chat adapter available";
     }
     const bool module=pl::modmenu::ModuleBuilder("mobtalk_native.core","MobTalk Native")
@@ -155,6 +151,12 @@ bool registerConsole(pl::mod::ModContext& context) {
             if(key=="chat_memory") {
                 std::lock_guard lock(g.mutex);
                 g.persist=(value=="true" || value=="1");
+                if(g.persist) {
+                    std::vector<CreatureMemory> loaded;
+                    if(loadWorldMemory(g.savePath,loaded) && !loaded.empty() &&
+                       loaded.front().creatureId=="local-console-preview")
+                        g.preview=std::move(loaded.front());
+                }
             }
         })
         .config("behavior_tags","Live creature behavior actions (requires verified Bedrock bridge)",pl::modmenu::ConfigType::Toggle,"false")
