@@ -28,9 +28,9 @@ Implemented native core:
 - allow-listed behavior-marker parsing and intent classification;
 - bounded binary persistence engine;
 - real PreLoader HUD draw-command overlay and Android keyboard input callback;
-- optional BedrockTools API ABI v1 bridge for local-player tick, game-mode action, and attack notifications;
+- optional BedrockTools API ABI v1 bridge for local-player tick, game-mode action, and attack notifications, including block-break/place, interaction, and item-use counters;
 - local preview transcript save/load.
 
-The optional event bridge is a real runtime subscription, but not a creature-control bridge. It does not enumerate nearby entities, read entity identities, or issue movement/inventory/render commands. Submitted chat remains local preview text, not a game chat event or creature response.
+The optional event bridge is a real runtime subscription, including safe classification of documented player action event fields, but not a creature-control bridge. It does not enumerate nearby entities, read entity identities, or issue movement/inventory/render commands. Submitted chat remains local preview text, not a game chat event or creature response.
 
 Still missing for full CreatureChat behavior: nearby entity enumeration; player chat send/receive; secure AI HTTP adapter and key management; entity follow/flee/attack/protect navigation; inventory transactions; world-space particles and entity-attached chat bubbles; dedicated native chat UI; multiplayer synchronization; and automatic per-world persistence hooks. These remain disabled. The bridge fails closed if BedrockTools API ABI v1 is absent/incompatible. No undocumented offsets are guessed and no Java/Fabric bytecode is loaded.
