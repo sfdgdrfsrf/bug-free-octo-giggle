@@ -2,6 +2,7 @@
 #include "mobtalk/mobtalk.hpp"
 #include "mobtalk/persistence.hpp"
 #include "mobtalk/runtime_bridge.hpp"
+#include "mobtalk/entity_recognition.hpp"
 #include <pl/Input.hpp>
 #include <pl/ModMenu.hpp>
 #include <algorithm>
@@ -20,6 +21,7 @@ struct State {
     std::mutex mutex;
     bool enabled{false};
     bool open{false};
+    bool scannerOpen{false};
     bool persist{false};
     std::string draft;
     std::string status{"No creature runtime bridge connected"};
@@ -56,15 +58,17 @@ void eraseLastCodepoint(std::string& value) {
     value.resize(i);
 }
 void render() {
-    bool visible=false;
+    bool visible=false, scannerVisible=false;
     std::string draft,status,last;
     {
         std::lock_guard lock(g.mutex);
         visible=g.enabled && g.open;
+        scannerVisible=g.enabled && g.scannerOpen;
         draft=g.draft;
         status=g.status;
         if(!g.preview.history.empty()) last=g.preview.history.back().text;
     }
+    const auto nearby=entities::nearbyCreatures();
     const auto bridge=runtime::snapshot();
     const std::string bridgeState=(bridge.bedrockToolsAvailable && bridge.subscribed)
         ? "Runtime bridge: connected" : "Runtime bridge: offline";
@@ -78,10 +82,10 @@ void render() {
             ? "Actor list signature found; enumeration OFF"
             : "Actor list signature unavailable");
     std::vector<pl::modmenu::DrawCommand> commands;
-    if(visible) {
+    if(visible || scannerVisible) {
         using Type=pl::modmenu::DrawCommandType;
         pl::modmenu::DrawCommand panel{};
-        panel.type=Type::RectFilled; panel.x=24; panel.y=56; panel.w=330; panel.h=246;
+        panel.type=Type::RectFilled; panel.x=24; panel.y=56; panel.w=350; panel.h=scannerVisible?330:246;
         panel.color=0xE51B1B1Bu;
         commands.push_back(panel);
         auto addText=[&](float x,float y,float size,std::string text,std::uint32_t color) {
@@ -89,17 +93,34 @@ void render() {
             c.type=Type::Text; c.x=x; c.y=y; c.size=size; c.color=color;
             c.text=std::move(text); commands.push_back(std::move(c));
         };
-        addText(38,68,19,"MobTalk Console",0xffffffffu);
-        addText(38,91,12,"Preview mode - messages are not sent to mobs",0xffffcc66u);
-        addText(38,111,12,bridgeState,bridge.subscribed?0xff99ff99u:0xffffcc66u);
-        addText(38,129,10,eventCounts,0xffcccccc);
-        addText(38,143,10,eventCounts2,0xffcccccc);
-        addText(38,157,10,entityProbe,0xffffcc66u);
-        addText(38,177,12,"Last local message:",0xffdddddd);
-        addText(38,194,12,last.empty()?"(none yet)":last,0xffffffffu);
-        addText(38,217,12,"Type below, then press Enter:",0xffdddddd);
-        addText(38,234,14,draft.empty()?"Tap keyboard to type...":draft,0xffaaffaa);
-        addText(38,264,10,status,0xffcccccc);
+        addText(38,68,19,scannerVisible?"MobTalk Entity Scanner":"MobTalk Console",0xffffffffu);
+        if(scannerVisible) {
+            addText(38,91,12,"Nearby registry: "+std::to_string(nearby.count)+" entities",0xff99ff99u);
+            addText(38,109,10,"Read-only; waiting for verified live entity feed",0xffffcc66u);
+            const std::size_t shown=std::min<std::size_t>(nearby.count,10);
+            for(std::size_t i=0;i<shown;++i) {
+                const auto& mob=nearby.creatures[i];
+                const std::string name=mob.displayName[0]?mob.displayName:mob.typeId;
+                const std::string line=std::to_string(i+1)+". "+name+" ["+mob.typeId+"]";
+                addText(38,130+static_cast<float>(i)*16,10,line,0xffffffffu);
+            }
+            if(nearby.count==0) addText(38,132,12,"No entities received yet",0xffccccccu);
+            if(nearby.count>shown) addText(38,130+static_cast<float>(shown)*16,10,
+                "+"+std::to_string(nearby.count-shown)+" more",0xffccccccu);
+        } else {
+            addText(38,91,12,"Preview mode - messages are not sent to mobs",0xffffcc66u);
+        }
+        if(!scannerVisible) {
+            addText(38,111,12,bridgeState,bridge.subscribed?0xff99ff99u:0xffffcc66u);
+            addText(38,129,10,eventCounts,0xffcccccc);
+            addText(38,143,10,eventCounts2,0xffcccccc);
+            addText(38,157,10,entityProbe,0xffffcc66u);
+            addText(38,177,12,"Last local message:",0xffdddddd);
+            addText(38,194,12,last.empty()?"(none yet)":last,0xffffffffu);
+            addText(38,217,12,"Type below, then press Enter:",0xffdddddd);
+            addText(38,234,14,draft.empty()?"Tap keyboard to type...":draft,0xffaaffaa);
+            addText(38,264,10,status,0xffcccccc);
+        }
     }
     pl::modmenu::submitDrawCommands("mobtalk_native.core",commands);
 }
@@ -148,13 +169,24 @@ void onButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
     else pl::input::hideKeyboard();
     render();
 }
+void onScannerButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
+    if(event!=pl::modmenu::ButtonEvent::Click) return;
+    {
+        std::lock_guard lock(g.mutex);
+        if(!g.enabled) return;
+        g.scannerOpen=!g.scannerOpen;
+        if(g.scannerOpen) g.open=false;
+    }
+    pl::input::hideKeyboard();
+    render();
+}
 } // namespace
 
 bool registerConsole(pl::mod::ModContext& context) {
     runtime::setActorEnumerationEnabled(false);
     {
         std::lock_guard lock(g.mutex);
-        g.enabled=true; g.open=false; g.persist=false; g.draft.clear();
+        g.enabled=true; g.open=false; g.scannerOpen=false; g.persist=false; g.draft.clear();
         g.savePath=context.dataDir()/"mobtalk-local-console.mtmem";
         g.preview=CreatureMemory{};
         g.preview.creatureId="local-console-preview";
@@ -165,7 +197,7 @@ bool registerConsole(pl::mod::ModContext& context) {
         .description("Native conversation core and local HUD console; live entity bridge unavailable.")
         .modId(context.id()).defaultEnabled(true)
         .config("chat_memory","Save local console transcript",pl::modmenu::ConfigType::Toggle,"false")
-        .config("actor_enumeration_probe","LOCKED: actor probe disabled pending exact 26.62 validation",pl::modmenu::ConfigType::Toggle,"false")
+        .config("actor_enumeration_probe","LOCKED: unsafe internal actor probe; unavailable",pl::modmenu::ConfigType::Toggle,"false")
         .onConfigChanged([](std::string_view,std::string_view key,std::string_view value) {
             if(key=="actor_enumeration_probe") {
                 runtime::setActorEnumerationEnabled(value=="true" || value=="1");
@@ -188,20 +220,25 @@ bool registerConsole(pl::mod::ModContext& context) {
         .moduleId("mobtalk_native.core").modId(context.id())
         .label("Talk").behavior(pl::modmenu::ButtonBehavior::Click)
         .defaultVisible(true).onEvent(onButton).registerButton();
+    const bool scannerButton=pl::modmenu::ButtonBuilder("mobtalk_native.scan","Nearby Entities")
+        .moduleId("mobtalk_native.core").modId(context.id())
+        .label("Scan Nearby").behavior(pl::modmenu::ButtonBehavior::Click)
+        .defaultVisible(true).onEvent(onScannerButton).registerButton();
     pl::input::registerKeyCallback(onKey);
     render();
     context.logger().info("MobTalk HUD console registered; messages are local preview only");
-    return module && button;
+    return module && button && scannerButton;
 }
 void unregisterConsole() noexcept {
     runtime::setActorEnumerationEnabled(false);
     {
         std::lock_guard lock(g.mutex);
-        g.enabled=false; g.open=false; g.draft.clear();
+        g.enabled=false; g.open=false; g.scannerOpen=false; g.draft.clear();
     }
     pl::input::hideKeyboard();
     pl::modmenu::submitDrawCommands("mobtalk_native.core",std::span<const pl::modmenu::DrawCommand>{});
     pl::modmenu::unregisterButton("mobtalk_native.open");
+    pl::modmenu::unregisterButton("mobtalk_native.scan");
     pl::modmenu::unregisterModule("mobtalk_native.core");
 }
 } // namespace mobtalk::ui
