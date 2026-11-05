@@ -35,6 +35,29 @@ Reference source inspected (not vendored):
 - https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/sdk/world/Level.hpp
 - https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/sdk/client/ClientInstance.hpp
 
+## Newly verified actor-enumeration candidate
+
+The BedrockTools source tree contains a concrete internal implementation pattern:
+
+- `SignatureId::ActorManagerList` is enum ordinal **12** in the inspected v1.5.10 header.
+- The Tablist, Debug Menu, and Chat Heads modules resolve that signature.
+- Those modules declare its callable type as `std::vector<void*> (*)(void* actorManager)`.
+- They obtain the actor manager from the local player's Level and call the function synchronously during a local-player tick.
+- They use the returned vector immediately for filtering/copying player information; they do not establish ownership of the returned Actor objects.
+
+This is stronger evidence than a guessed iterator. It is still an **internal BedrockTools implementation detail**, not a stable public SDK method. The public ABI's generic signature resolver can resolve ordinal 12, but ABI v1 does not report the BedrockTools release or Minecraft build. Therefore the current MobTalk bridge only checks whether the signature resolves. It does not call it, dereference the Level/actor-manager offsets, or retain Actor pointers.
+
+The first runtime implementation will be a read-only, same-callback adapter with these rules:
+1. Require an explicit runtime build allowlist and a matching BedrockTools signature-table revision.
+2. Resolve ActorManagerList and verify the local-player/Level/actor-manager prerequisites.
+3. Call the list function only on the game thread from the local-player tick callback.
+4. Bound the number of returned actors before processing.
+5. Copy only scalar values and bounded strings into owned snapshots during that callback.
+6. Never cache Actor pointers, vector storage, component pointers, or string references after the callback.
+7. If any prerequisite is missing, return an empty snapshot and keep gameplay features disabled.
+
+**Not yet enabled:** Minecraft 26.62 has not been verified against the exact Android game binary. The candidate signature resolving in BedrockTools does not by itself prove that its offsets or function ABI are valid for 26.62. No live enumeration call is enabled until that build identity and callback contract are verified.
+
 ## Subsystem integration matrix
 
 | System | Public surface found | Current safe status | Missing proof/API |
