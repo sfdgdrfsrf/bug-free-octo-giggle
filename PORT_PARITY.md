@@ -105,6 +105,8 @@ Implemented native-safe core:
 - allow-listed behavior-marker parsing;
 - basic chat/befriend/gift/take/release intent classification.
 
-Still missing for a full port: Bedrock chat hooks, entity enumeration, live goal/navigation control, inventory transactions, particle/chat-bubble rendering, multiplayer sync, persistent world data, and a secure HTTP/LLM adapter. These remain disabled. No Java/Fabric bytecode is loaded.
+Added since the initial scaffold: a bounded binary world-memory store with per-world hashed filenames, version and record-size validation, atomic temporary-file replacement, and failure-safe loading. Host regression tests cover round-trip, world isolation, empty saves, and corrupt-file rejection. The storage engine is not yet connected to live creature events or automatic world lifecycle hooks.
+
+Still missing for a full port: verified Bedrock chat hooks, entity enumeration, live goal/navigation control, inventory transactions, particle/chat-bubble rendering, GUI screens, multiplayer synchronization, automatic persistence lifecycle wiring, and a secure HTTP/LLM adapter. These remain disabled. PreLoader 0.2.2 supplies lifecycle/config/input/low-level hook primitives but no documented high-level Bedrock entity APIs. No Java/Fabric bytecode is loaded and no undocumented game offsets are guessed.
 
 The reference repository declares GPL-3.0-or-later for source code and CC-BY-NC-SA-4.0 for non-code assets, plus trademark restrictions. The native implementation is independently authored and does not bundle reference prompts, textures, screenshots, logos, or other assets. See [mobtalk-native/LICENSE-NOTICE.md](mobtalk-native/LICENSE-NOTICE.md).
