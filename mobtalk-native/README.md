@@ -40,3 +40,5 @@ The root workflow builds `mobtalk-native-arm64.levipack` separately from `levima
 ## Licensing
 
 The referenced CreatureChat repository identifies source code as GPL-3.0-or-later and non-code assets as CC-BY-NC-SA-4.0, with separate trademark restrictions. This native implementation does not bundle its code or protected assets. See `LICENSE-NOTICE.md`; no endorsement is implied.
+
+- Entity recognition pipeline: verified adapters can submit pointer-free frames, maintain a bounded nearby-creature list, assign session-only target IDs, and look up the selected creature. No Bedrock actor adapter currently feeds this pipeline; it is deliberately not connected to unverified offsets.
