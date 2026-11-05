@@ -25,7 +25,7 @@ See [PORT_PARITY.md](PORT_PARITY.md) for source references, detailed acceptance 
 
 ## Current status — foundation only
 
-The repository now contains the first six pure-C++ gameplay engines: deterministic personalization variant selection; weighted navigation movement costs; action-frequency learning for AdaptiveMobs; an offline Capri Chip companion request parser; a 14-entry original cursed-technique metadata registry; and a five-level Jim's Mine extraction/economy state machine. Regression tests cover these systems. They are still **core logic only**, not complete gameplay ports: they are not yet connected to live Bedrock rendering, entities, inventory, input, blocks, audio, or world persistence. Each feature must be connected to verified Bedrock runtime APIs and pass in-game tests before being marked complete.
+The repository now contains the first six pure-C++ gameplay engines: deterministic personalization variant selection; weighted movement costs plus bounded weighted-graph route planning; action-frequency learning for AdaptiveMobs; an offline Capri Chip request parser and bounded task queue; a 14-entry original cursed-technique registry with energy/cooldown casting; and a five-level Jim's Mine extraction/economy state machine. Regression tests cover these systems. They are still **core logic only**, not complete gameplay ports: they are not yet connected to live Bedrock rendering, entities, inventory, input, blocks, audio, or world persistence. Each feature must be connected to verified Bedrock runtime APIs and pass in-game tests before being marked complete.
 
 ## Runtime and safety constraints
 
