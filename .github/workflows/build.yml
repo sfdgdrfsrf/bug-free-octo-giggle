@@ -23,8 +23,11 @@ jobs:
           set -euo pipefail
           c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Iinclude \
             tests/systems_test.cpp src/features/systems.cpp -o systems_test
-      - name: Run native safety tests
-        run: ./systems_test
+          ./systems_test
+          c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -Iinclude \
+            tests/port_engines_test.cpp src/features/port_engines.cpp -o port_engines_test
+      - name: Run native port engine tests
+        run: ./port_engines_test
 
   android-arm64:
     runs-on: ubuntu-latest
