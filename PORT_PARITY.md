@@ -88,7 +88,8 @@ The source is marked All Rights Reserved. Recreate gameplay systems independentl
 ## Current repository status (2026-11-05)
 
 - Native ARM64 shared library inside a .levipack is the target package; this is not an APK and not a Java .jar.
-- Existing systems are prototype data models: basic four-direction A*, simple mob stat adaptation, companion bond/stamina, cursed-energy spending/cooldown checks, and a mine encounter suspicion threshold.
-- The current feature registry labels all six modules planned.
+- Native core engines now include deterministic personalization hashing/variant selection; configurable weighted movement-cost primitives for navigation; player-action frequency memory for mob adaptation; an offline companion request parser; a 14-entry original cursed-technique metadata registry; and a five-level mine extraction/economy state machine.
+- These engines are pure C++ logic and are covered by host regression tests. They are not yet connected to live Bedrock rendering, entities, inventory, input, blocks, audio, or world persistence.
+- The feature registry labels the six modules `core-logic`, not runtime-integrated or parity-verified.
 - No source feature should be advertised as a complete port until its runtime bridge, controls/settings, persistence, and in-game acceptance tests are implemented.
 - The next engineering gate is a verified runtime capability layer (player/world/entity/block/inventory/render/input/audio/command hooks), followed by one port at a time with parity tests. If a required capability is unavailable, record the exact gap and keep that behavior disabled rather than faking it.
