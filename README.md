@@ -21,7 +21,7 @@ The six requested ports are feature-parity targets, not loose inspirations:
 - **JJK / Zasatsu Bakuto:** 14 cursed techniques, domain expansions/clashes, sorcerer and curse NPCs, grades, missions, cursed tools, and cursed energy.
 - **Jim's Mine:** elevator entry, multi-level copper-mine extraction, loot, extraction, gear purchases/upgrades, and escalating horror encounters.
 
-See [PORT_PARITY.md](PORT_PARITY.md) for source references, detailed acceptance criteria, licensing constraints, and implementation status.
+See [PORT_PARITY.md](PORT_PARITY.md) for source references, detailed acceptance criteria, licensing constraints, and implementation status. See [RUNTIME_INTEGRATION.md](RUNTIME_INTEGRATION.md) for the verified Bedrock API surface, missing capabilities, and staged runtime integration requirements.
 
 ## Current status — foundation only
 
