@@ -49,6 +49,7 @@ struct MineRun {
 bool startMineRun(MineRun& run) noexcept;
 void collectMineLoot(MineRun& run, std::uint32_t copper, std::uint32_t lootValue) noexcept;
 bool extractMineRun(MineRun& run) noexcept;
+bool returnToMineHub(MineRun& run) noexcept;
 bool failMineRun(MineRun& run) noexcept;
 bool purchaseMineGear(MineRun& run, std::uint32_t cost) noexcept;
 bool unlockNextMineLevel(MineRun& run) noexcept;
