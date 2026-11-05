@@ -1,5 +1,6 @@
 #include "mobtalk/runtime_bridge.hpp"
 #include <dlfcn.h>
+#include <cstddef>
 #include <mutex>
 namespace mobtalk::runtime {
 namespace {
