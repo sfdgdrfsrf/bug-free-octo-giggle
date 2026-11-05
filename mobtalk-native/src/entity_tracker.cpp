@@ -9,7 +9,6 @@ float distanceSquared(const EntitySnapshot& e,float x,float y,float z) noexcept 
     const float dx=e.x-x,dy=e.y-y,dz=e.z-z;
     return dx*dx+dy*dy+dz*dz;
 }
-bool sameText(const char* a,const char* b) noexcept { return std::strncmp(a,b,kTypeIdCapacity)==0; }
 }
 void EntityTracker::update(const SnapshotFrame& frame,float px,float py,float pz,float radius) noexcept {
     if(!std::isfinite(px)||!std::isfinite(py)||!std::isfinite(pz)||!std::isfinite(radius)||radius<=0) return;
