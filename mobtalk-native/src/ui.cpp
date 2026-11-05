@@ -85,7 +85,7 @@ void render() {
     if(visible || scannerVisible) {
         using Type=pl::modmenu::DrawCommandType;
         pl::modmenu::DrawCommand panel{};
-        panel.type=Type::RectFilled; panel.x=24; panel.y=56; panel.w=350; panel.h=scannerVisible?330:246;
+        panel.type=Type::RectFilled; panel.x=24; panel.y=56; panel.w=350; panel.h=scannerVisible?344:246;
         panel.color=0xE51B1B1Bu;
         commands.push_back(panel);
         auto addText=[&](float x,float y,float size,std::string text,std::uint32_t color) {
@@ -96,16 +96,17 @@ void render() {
         addText(38,68,19,scannerVisible?"MobTalk Entity Scanner":"MobTalk Console",0xffffffffu);
         if(scannerVisible) {
             addText(38,91,12,"Nearby registry: "+std::to_string(nearby.count)+" entities",0xff99ff99u);
-            addText(38,109,10,"Read-only; waiting for verified live entity feed",0xffffcc66u);
+            addText(38,109,10,bridge.worldSessionSeen ? "World detected; auto-scan session active" : "Waiting for world/player tick",bridge.worldSessionSeen?0xff99ff99u:0xffffcc66u);
+            addText(38,123,10,"Entity feed: awaiting verified enumerator",0xffffcc66u);
             const std::size_t shown=std::min<std::size_t>(nearby.count,10);
             for(std::size_t i=0;i<shown;++i) {
                 const auto& mob=nearby.creatures[i];
                 const std::string name=mob.displayName[0]?mob.displayName:mob.typeId;
                 const std::string line=std::to_string(i+1)+". "+name+" ["+mob.typeId+"]";
-                addText(38,130+static_cast<float>(i)*16,10,line,0xffffffffu);
+                addText(38,144+static_cast<float>(i)*16,10,line,0xffffffffu);
             }
-            if(nearby.count==0) addText(38,132,12,"No entities received yet",0xffccccccu);
-            if(nearby.count>shown) addText(38,130+static_cast<float>(shown)*16,10,
+            if(nearby.count==0) addText(38,146,12,bridge.worldSessionSeen?"No mob snapshots received yet":"Join a world to start scanning",0xffccccccu);
+            if(nearby.count>shown) addText(38,144+static_cast<float>(shown)*16,10,
                 "+"+std::to_string(nearby.count-shown)+" more",0xffccccccu);
         } else {
             addText(38,91,12,"Preview mode - messages are not sent to mobs",0xffffcc66u);
