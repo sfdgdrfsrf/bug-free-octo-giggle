@@ -13,7 +13,7 @@ int main(){
  f.entities[2].x=50;f.entities[2].isAlive=true;
  EntityTracker tracker;tracker.update(f,0,0,0,10);
  auto near=tracker.nearby();assert(near.count==2);assert(near.creatures[0].runtimeKey==11);
- TrackedCreature target{};assert(tracker.find(near.creatures[0].sessionId,target));assert(target.typeId[9]=='p');
+ TrackedCreature target{};assert(tracker.find(near.creatures[0].sessionId,target));assert(target.typeId[10]=='p');
  const auto oldId=target.sessionId;
  SnapshotFrame next{};next.generation=2;next.count=1;next.entities[0]=f.entities[1];
  tracker.update(next,0,0,0,10);assert(tracker.nearby().count==1);
