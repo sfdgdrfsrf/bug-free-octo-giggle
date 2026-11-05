@@ -8,6 +8,8 @@ All gameplay integrations must fail closed unless the runtime adapter reports a 
 
 ## Verified public integration surface inspected
 
+The user reports having the latest BedrockTools installed. The latest public release inspected for this work is **BedrockTools v1.5.10** (release tag `v1.5.10`, SDK ABI v1). The tagged v1.5.10 headers were checked directly; they match the event/API declarations described below. This identifies the public target we are integrating against, but does not independently inspect the user's installed binary or prove Minecraft 26.62 compatibility.
+
 The public BedrockTools source currently exposes an ABI-v1 table with:
 - ABI version and structure size;
 - signature resolver;
@@ -22,11 +24,11 @@ Its documented event declarations include:
 
 The current MobTalk bridge subscribes to LocalPlayerTick, GameModeAction, and Attack and counts action categories. It only reads the leading fields documented by those event declarations. It does not retain or dereference the pointers.
 
-The public BedrockTools SDK also contains wrappers for ClientInstance, Player/Actor, Level, movement input, inventory offsets, and rendering offsets. These wrappers use version-specific signatures and direct object offsets. The Level wrapper exposes actorManager only as an opaque pointer; the inspected public SDK does not provide a supported actor-enumeration API through the external ABI. Inventory and rendering offsets are declarations, not stable cross-version APIs.
+The public BedrockTools v1.5.10 SDK also contains wrappers for ClientInstance, Player/Actor, Level, movement input, inventory offsets, and rendering offsets. These wrappers use version-specific signatures and direct object offsets. The Level wrapper exposes actorManager only as an opaque pointer; the inspected v1.5.10 public SDK does not provide a supported actor-enumeration API through the external ABI. The Player/Actor wrapper offers position/rotation accessors, but they dereference version-specific component offsets and are not safe to call until the exact Minecraft build is validated. Inventory and rendering offsets are declarations, not stable cross-version APIs.
 
 Reference source inspected (not vendored):
 - https://github.com/QYCottage/BedrockTools
-- https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/Api.hpp
+- https://github.com/QYCottage/BedrockTools/tree/v1.5.10 (latest public release inspected)\n- https://github.com/QYCottage/BedrockTools/blob/v1.5.10/include/bedrocktools/Api.hpp
 - https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/events/LocalPlayerTickEvent.hpp
 - https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/events/GameModeActionEvent.hpp
 - https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/sdk/world/Actor.hpp
