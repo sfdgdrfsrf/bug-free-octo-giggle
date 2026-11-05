@@ -91,3 +91,5 @@ The next full runtime implementation must still follow these rules:
 - The existing event bridge is useful telemetry, not proof of entity, inventory, movement, rendering, or chat compatibility.
 
 Do not mark a subsystem as integrated until its API contract, exact runtime build, pointer lifetime, thread affinity, failure behavior, tests, and in-game validation are documented.
+
+- Entity recognition pipeline: verified adapters can submit pointer-free frames, maintain a bounded nearby-creature list, assign session-only target IDs, and look up the selected creature. No Bedrock actor adapter currently feeds this pipeline; it is deliberately not connected to unverified offsets.
