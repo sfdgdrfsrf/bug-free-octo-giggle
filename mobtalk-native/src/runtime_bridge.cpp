@@ -1,8 +1,6 @@
 #include "mobtalk/runtime_bridge.hpp"
-
 #include <dlfcn.h>
 #include <mutex>
-
 namespace mobtalk::runtime {
 namespace {
 using EventType = std::uint32_t;
@@ -19,24 +17,17 @@ struct ApiV1 {
 using GetApi = const ApiV1*(*)(std::uint32_t);
 constexpr std::uint32_t kAbiVersion = 1;
 constexpr EventType kLocalPlayerTick = 2;
-constexpr EventType kGameModeAction = 8;
 constexpr EventType kAttack = 4;
+constexpr EventType kGameModeAction = 8;
 constexpr EventPriority kNormalPriority = 0;
-
 std::mutex gMutex;
 void* gHandle = nullptr;
 const ApiV1* gApi = nullptr;
-std::uint64_t gTickSubscription = 0;
-std::uint64_t gActionSubscription = 0;
-std::uint64_t gAttackSubscription = 0;
-std::atomic<std::uint64_t> gTicks{0};
-std::atomic<std::uint64_t> gActions{0};
-std::atomic<std::uint64_t> gAttacks{0};
-
+std::uint64_t gTickSubscription = 0, gActionSubscription = 0, gAttackSubscription = 0;
+std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
 void onEvent(EventType type, void* payload, void*) {
     if (!payload) return;
     if (type == kLocalPlayerTick) {
-        // LocalPlayerTickEvent starts with a Player*; only check presence.
         void* player = *static_cast<void**>(payload);
         if (player) gTicks.fetch_add(1, std::memory_order_relaxed);
     } else if (type == kGameModeAction) {
@@ -45,30 +36,7 @@ void onEvent(EventType type, void* payload, void*) {
         gAttacks.fetch_add(1, std::memory_order_relaxed);
     }
 }
-}
-
-bool start() noexcept {
-    std::lock_guard lock(gMutex);
-    if (gApi && (gTickSubscription || gActionSubscription || gAttackSubscription)) return true;
-    gHandle = dlopen("libBedrockTools.so", RTLD_NOW | RTLD_NOLOAD);
-    if (!gHandle) return false;
-    auto getter = reinterpret_cast<GetApi>(dlsym(gHandle, "BedrockTools_GetApi"));
-    gApi = getter ? getter(kAbiVersion) : nullptr;
-    if (!gApi || gApi->abiVersion != kAbiVersion ||
-        gApi->structSize < sizeof(ApiV1) || !gApi->subscribe || !gApi->unsubscribe) {
-        gApi = nullptr;
-        dlclose(gHandle);
-        gHandle = nullptr;
-        return false;
-    }
-    gTickSubscription = gApi->subscribe(kLocalPlayerTick, kNormalPriority, onEvent, nullptr);
-    gActionSubscription = gApi->subscribe(kGameModeAction, kNormalPriority, onEvent, nullptr);
-    gAttackSubscription = gApi->subscribe(kAttack, kNormalPriority, onEvent, nullptr);
-    return gTickSubscription != 0 || gActionSubscription != 0 || gAttackSubscription != 0;
-}
-
-void stop() noexcept {
-    std::lock_guard lock(gMutex);
+void releaseLocked() noexcept {
     if (gApi) {
         if (gTickSubscription) gApi->unsubscribe(gTickSubscription);
         if (gActionSubscription) gApi->unsubscribe(gActionSubscription);
@@ -79,13 +47,37 @@ void stop() noexcept {
     if (gHandle) dlclose(gHandle);
     gHandle = nullptr;
 }
-
+}
+bool start() noexcept {
+    std::lock_guard lock(gMutex);
+    if (gApi && (gTickSubscription || gActionSubscription || gAttackSubscription)) return true;
+    releaseLocked();
+    gHandle = dlopen("libBedrockTools.so", RTLD_NOW | RTLD_NOLOAD);
+    if (!gHandle) return false;
+    auto getter = reinterpret_cast<GetApi>(dlsym(gHandle, "BedrockTools_GetApi"));
+    gApi = getter ? getter(kAbiVersion) : nullptr;
+    if (!gApi || gApi->abiVersion != kAbiVersion ||
+        gApi->structSize < sizeof(ApiV1) || !gApi->subscribe || !gApi->unsubscribe) {
+        releaseLocked();
+        return false;
+    }
+    gTickSubscription = gApi->subscribe(kLocalPlayerTick, kNormalPriority, onEvent, nullptr);
+    gActionSubscription = gApi->subscribe(kGameModeAction, kNormalPriority, onEvent, nullptr);
+    gAttackSubscription = gApi->subscribe(kAttack, kNormalPriority, onEvent, nullptr);
+    if (!gTickSubscription && !gActionSubscription && !gAttackSubscription) {
+        releaseLocked();
+        return false;
+    }
+    return true;
+}
+void stop() noexcept {
+    std::lock_guard lock(gMutex);
+    releaseLocked();
+}
 Snapshot snapshot() noexcept {
     std::lock_guard lock(gMutex);
-    return {gTicks.load(std::memory_order_relaxed),
-            gActions.load(std::memory_order_relaxed),
-            gAttacks.load(std::memory_order_relaxed),
-            gApi != nullptr,
+    return {gTicks.load(std::memory_order_relaxed), gActions.load(std::memory_order_relaxed),
+            gAttacks.load(std::memory_order_relaxed), gApi != nullptr,
             gTickSubscription != 0 || gActionSubscription != 0 || gAttackSubscription != 0};
 }
 }
