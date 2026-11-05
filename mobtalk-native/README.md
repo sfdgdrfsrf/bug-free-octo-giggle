@@ -23,7 +23,7 @@ The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is
 
 For the optional event bridge to connect, install a compatible BedrockTools build that exports `BedrockTools_GetApi` from `libBedrockTools.so` (API ABI version 1). MobTalk uses the documented public C ABI shape and subscribes to the published event IDs. It does not copy BedrockTools source or its internal SDK headers. BedrockTools' own version-specific signatures/offsets remain owned by that runtime.
 
-The current bridge observes player-tick, game-mode-action, and attack event notifications. The optional `actor_enumeration_probe` setting is OFF by default. Enabling it invokes a version-specific internal BedrockTools function and reads version-specific Level offsets; it may crash on an unsupported Minecraft build. Only use it on a backed-up disposable world after confirming the exact game/runtime combination. It counts actor pointers but does not dereference or retain them. This is not yet entity identity or behavior integration.
+The current bridge observes player-tick, game-mode-action, and attack event notifications. The `actor_enumeration_probe` setting is OFF by default and currently hard-locked in code, so a config toggle cannot invoke it. It uses a version-specific internal BedrockTools function and Level offsets; do not unlock it until the exact Minecraft 26.62 binary, offsets, and C++ ABI are verified. Only use it on a backed-up disposable world after confirming the exact game/runtime combination. It counts actor pointers but does not dereference or retain them. This is not yet entity identity or behavior integration.
 
 ## Important live-runtime boundary
 
