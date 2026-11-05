@@ -25,7 +25,7 @@ See [PORT_PARITY.md](PORT_PARITY.md) for source references, detailed acceptance 
 
 ## Current status — foundation only
 
-The repository contains prototype data models and planning logic, not six completed gameplay ports. A basic bounded grid A*, stat-adaptation formula, companion bond/stamina model, cursed-energy resource checks, and mine encounter threshold are not feature parity. Each feature must be connected to verified Bedrock runtime APIs and pass in-game tests before being marked complete.
+The repository now contains the first six pure-C++ gameplay engines: deterministic personalization variant selection; weighted navigation movement costs; action-frequency learning for AdaptiveMobs; an offline Capri Chip companion request parser; a 14-entry original cursed-technique metadata registry; and a five-level Jim's Mine extraction/economy state machine. Regression tests cover these systems. They are still **core logic only**, not complete gameplay ports: they are not yet connected to live Bedrock rendering, entities, inventory, input, blocks, audio, or world persistence. Each feature must be connected to verified Bedrock runtime APIs and pass in-game tests before being marked complete.
 
 ## Runtime and safety constraints
 
