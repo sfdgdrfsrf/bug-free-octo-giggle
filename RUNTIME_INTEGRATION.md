@@ -2,94 +2,71 @@
 
 ## Target and safety rule
 
-The observed target is Minecraft Bedrock Android 26.60, arm64-v8a, loaded by LeviLaunchroid, with BedrockTools v1.5.10 shown in the user's screenshot. The exact game binary/build ID and target runtime are not verified. A successful Android compile only proves that the native libraries link; it does not prove that a Bedrock object layout, signature, vtable, event payload, or callback lifetime is valid in 26.60.
+Target: Minecraft Bedrock Android **26.60**, arm64-v8a, loaded by LeviLaunchroid, with **BedrockTools v1.5.10**. BedrockTools v1.5.10 includes the 26.60 support update from commit [3de9a7d](https://github.com/QYCottage/BedrockTools/commit/3de9a7d641c8222a9bf536d828449a27b58cd20a). Its tagged source provides the offsets and signature patterns used by the MobTalk scanner. This does not independently fingerprint the user's installed `libminecraftpe.so` or replace device testing.
 
-All gameplay integrations must fail closed unless the runtime adapter reports a verified game build and the required capability. No guessed offsets, raw actor-manager traversal, retained game pointers, or world writes are allowed.
+Gameplay integrations remain capability-gated. MobTalk does not retain raw actor pointers, actor-list vector storage, or component pointers after the LocalPlayerTick callback. The scanner is read-only.
 
-## Verified public integration surface inspected
+## Verified BedrockTools source surface
 
-The user reports having the latest BedrockTools installed. The latest public release inspected for this work is **BedrockTools v1.5.10** (release tag `v1.5.10`, SDK ABI v1). The tagged v1.5.10 headers were checked directly; they match the event/API declarations described below. This identifies the public target we are integrating against, but does not independently inspect the user's installed binary or prove Minecraft 26.60 compatibility.
-
-The public BedrockTools source currently exposes an ABI-v1 table with:
+The inspected v1.5.10 public ABI provides:
 - ABI version and structure size;
 - signature resolver;
 - client-instance getter;
 - event subscribe/unsubscribe functions.
 
-Its documented event declarations include:
-- LocalPlayerTick (payload begins with a Player pointer);
-- GameModeAction (mode/action enums and a game-mode pointer);
-- Attack;
-- several UI/input/frame events.
+The documented event declarations include LocalPlayerTick, GameModeAction, Attack, and several UI/input/frame events. MobTalk subscribes to LocalPlayerTick, GameModeAction, and Attack. The LocalPlayerTick event is the game-thread callback used for the scanner.
 
-The current MobTalk bridge subscribes to LocalPlayerTick, GameModeAction, and Attack and counts action categories. A LocalPlayerTick marks the world-session scanner active automatically. This is only a session-presence signal; it does not enumerate mobs. It only reads the leading fields documented by those event declarations. It does not retain or dereference the pointers.
+BedrockTools v1.5.10's own Tablist and Debug Menu modules use the internal `ActorManagerList` signature as `std::vector<void*>(*)(void* actorManager)`. Tablist also uses `ActorIsPlayer` and `ActorGetNameTag`, whose function types are `bool(*)(void*)` and `std::string(*)(void*)`. These are internal runtime functions exposed indirectly through the generic signature resolver; they are not a stable external entity-iterator contract.
 
-The public BedrockTools v1.5.10 SDK also contains wrappers for ClientInstance, Player/Actor, Level, movement input, inventory offsets, and rendering offsets. Further inspection of the v1.5.10 source found that its internal Tablist and Debug Menu modules resolve `SignatureId::ActorManagerList` and call it as `std::vector<void*>(*)(void*)` with the Level actor-manager pointer. The public ABI exposes a generic `resolveSignature(uint16_t)` function, and `ActorManagerList` is ordinal 12 in the v1.5.10 enum. This is useful evidence, but not a documented external iterator contract: the function type is inferred from internal source use, and the actor-manager offset and signature match still depend on the exact game build. MobTalk now probes only whether that signature resolves; it deliberately does not call the function or traverse its result. These wrappers use version-specific signatures and direct object offsets. The Level wrapper exposes actorManager only as an opaque pointer; the inspected v1.5.10 public SDK does not provide a supported actor-enumeration API through the external ABI. The Player/Actor wrapper offers position/rotation accessors, but they dereference version-specific component offsets and are not safe to call until the exact Minecraft build is validated. Inventory and rendering offsets are declarations, not stable cross-version APIs.
+The v1.5.10 source includes the 26.60 support update. The matching offsets used by the adapter are:
+- Player Level: `0x1F0`
+- Level actor manager: `0x478`
+- Actor state-vector component: `0x228`
+- Actor rotation component: `0x238`
 
-Reference source inspected (not vendored):
-- https://github.com/QYCottage/BedrockTools
-- https://github.com/QYCottage/BedrockTools/tree/v1.5.10 (latest public release inspected)\n- https://github.com/QYCottage/BedrockTools/blob/v1.5.10/include/bedrocktools/Api.hpp
-- https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/events/LocalPlayerTickEvent.hpp
-- https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/events/GameModeActionEvent.hpp
-- https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/sdk/world/Actor.hpp
-- https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/sdk/world/Level.hpp
-- https://github.com/QYCottage/BedrockTools/blob/main/include/bedrocktools/sdk/client/ClientInstance.hpp
+Signature ordinals in the v1.5.10 enum:
+- ActorManagerList: 12
+- ActorIsPlayer: 66
+- ActorGetNameTag: 69
 
-## Newly verified actor-enumeration candidate
+## MobTalk scanner implementation
 
-The BedrockTools source tree contains a concrete internal implementation pattern:
+The live scanner is now connected to the recognition pipeline:
 
-- `SignatureId::ActorManagerList` is enum ordinal **12** in the inspected v1.5.10 header.
-- The Tablist, Debug Menu, and Chat Heads modules resolve that signature.
-- Those modules declare its callable type as `std::vector<void*> (*)(void* actorManager)`.
-- They obtain the actor manager from the local player's Level and call the function synchronously during a local-player tick.
-- They use the returned vector immediately for filtering/copying player information; they do not establish ownership of the returned Actor objects.
+1. At enable time, MobTalk obtains BedrockTools API ABI v1 and resolves all three required signatures. The scanner activates only if the API and all signatures are present.
+2. On LocalPlayerTick, it reads the player's Level and actor manager using the 26.60 offsets, then calls ActorManagerList synchronously on the game thread.
+3. It rejects actor lists larger than 4096 entries, skips null/self actors, reads each actor's state-vector and rotation components, rejects non-finite transforms, and filters to a 64-block radius.
+4. It calls ActorIsPlayer and ActorGetNameTag while each actor pointer is valid in the callback. Custom name tags are copied; unnamed non-player entities are labelled “Unnamed mob”. Player entities are identified separately.
+5. It sorts by distance, copies up to 128 pointer-free EntitySample records into the recognition pipeline, and the tracker keeps the nearest 32 session entities.
+6. No runtime pointer or std::string reference survives the callback. Disabling the scanner clears the recognition registry.
 
-This is stronger evidence than a guessed iterator. It is still an **internal BedrockTools implementation detail**, not a stable public SDK method. The public ABI's generic signature resolver can resolve ordinal 12, but ABI v1 does not report the BedrockTools release or Minecraft build. Therefore the current MobTalk bridge only checks whether the signature resolves. It does not call it, dereference the Level/actor-manager offsets, or retain Actor pointers.
+The `actor_enumeration_probe` configuration switch is now unlocked and defaults to enabled, as explicitly requested. It can be turned off from the MobTalk module settings. The scanner will remain off automatically if BedrockTools is absent, ABI-incompatible, or any required signature fails to resolve.
 
-MobTalk contains an experimental actor-count probe in source, but it is **hard-locked OFF in code** (`kActorProbeRuntimeValidated=false`). No config setting can enable it. The bridge only checks whether the signature resolves; it does not call the function or inspect actor pointers. This is a deliberately narrow smoke test, not full entity identity integration.
+**Entity-type limitation:** BedrockTools' inspected external ABI does not provide a stable entity identifier/name API for every mob. The scanner currently identifies players and lists non-player actors as generic entities, using custom name tags where available. Exact identifiers such as `minecraft:pig` or `minecraft:zombie` are not yet available from this adapter.
 
-The disabled probe's implementation contains version-specific `Actor::mLevel` and `Level::mActorManager` offsets and an internal C++ function returning `std::vector<void*>`. Since BedrockTools ABI v1 does not expose a Minecraft build ID or a stable iterator contract, it must remain locked until exact binary and ABI validation.
+## Runtime risk and validation
 
-The next full runtime implementation must still follow these rules:
-1. Require an explicit runtime build allowlist and a matching BedrockTools signature-table revision.
-2. Resolve ActorManagerList and verify the local-player/Level/actor-manager prerequisites.
-3. Call the list function only on the game thread from the local-player tick callback.
-4. Bound the number of returned actors before processing.
-5. Copy only scalar values and bounded strings into owned snapshots during that callback.
-6. Never cache Actor pointers, vector storage, component pointers, or string references after the callback.
-7. If any prerequisite is missing, return an empty snapshot and keep gameplay features disabled.
+The scanner relies on version-specific BedrockTools internals and direct object offsets. A signature match is useful evidence, but it is not a cryptographic build fingerprint and does not guarantee that the user's installed binary has the expected object layout or C++ ABI. A bad match can still cause an access violation; C++ exception handling cannot catch invalid memory access.
 
-**Not yet verified:** Minecraft 26.60 has not been verified against the exact Android game binary. The candidate signature resolving in BedrockTools does not by itself prove that its offsets or function ABI are valid for 26.60. The actor-count probe is shipped disabled by default; a user must explicitly enable it to invoke the internal function. Full actor snapshots and gameplay use remain disabled.
+The adapter is read-only and bounded, but it has **not yet been verified in a live Minecraft 26.60 session**. Test first in a backed-up disposable world. If Minecraft crashes, disable `actor_enumeration_probe` before launching again and report the crash point/log.
 
-## Subsystem integration matrix
+## Remaining integration matrix
 
-| System | Public surface found | Current safe status | Missing proof/API |
-|---|---|---|---|
-| Entity discovery and identity | LocalPlayerTick plus internal ActorManagerList pattern | Opt-in actor count only; no actor data copied | 26.60 object-layout/signature validation; supported iterator contract; stable identity and pointer lifetime rules |
-| Inventory | BedrockTools has inventory offset constants and an internal InventoryAccess implementation | Not connected | Supported external inventory API, slot/item lifetime rules, transaction authority, build validation |
-| Movement/navigation | Movement input component layout and player tick event | Planner core only | Supported actor movement/command API, collision/world queries, game-thread contract |
-| Rendering | Public render offsets and renderer wrappers | No custom entity rendering | Stable render callback/context, resource lifetime, 26.60 offsets and renderer validation |
-| Chat | MobTalk local HUD/input and transcript persistence | Local preview only | Incoming chat event, safe outbound chat API, entity chat bubble/render hook, multiplayer semantics |
-| World/block interaction | GameModeAction event observes player actions | Telemetry only | Read/write block API, inventory transaction API, permission/authority semantics |
-
-## Required staged implementation
-
-1. **Runtime identity gate:** obtain a runtime-provided Minecraft build identifier and ABI/capability version. Refuse gameplay hooks when the build is not explicitly allowlisted. BedrockTools ABI v1 as inspected does not expose a game-build identifier, so its presence alone is insufficient.
-2. **Read-only local-player adapter:** validate the 26.60 signature and callback thread/lifetime rules, then copy only bounded scalar data into pointer-free snapshots during the callback. Never store Actor/Player pointers.
-3. **Entity enumeration:** require an official iterator or a separately verified, version-pinned adapter. Do not walk the opaque actorManager pointer.
-4. **Inventory and world queries:** require typed APIs with explicit ownership, bounds, and game-thread rules. Read-only inventory inspection precedes any transaction or mutation.
-5. **Movement and actions:** add one action at a time behind opt-in toggles, with range/collision checks, cancellation, and a no-op mode.
-6. **Rendering and chat:** validate render-thread callback/context and chat send/receive APIs independently; neither may be inferred from HUD drawing or action events.
-7. **Device validation:** test on a backed-up disposable world with the exact Minecraft 26.60 Android binary and installed LeviLaunchroid/BedrockTools versions. Run read-only first, then each mutation capability separately.
+| System | Current status | Remaining work |
+|---|---|---|
+| Entity discovery | Read-only actor enumeration feeds pointer-free nearby snapshots | Device test; exact mob type identifiers; world-leave lifecycle |
+| Inventory | Not connected | Supported external inventory API, transaction semantics, build validation |
+| Movement/navigation | Planner core only | Supported actor movement API, collision/world queries, cancellation |
+| Rendering | No custom entity rendering | Stable render callback/context and resource lifetime |
+| Chat | Local preview console only | Incoming/outgoing chat APIs and entity chat bubble |
+| World/block interaction | Player action telemetry only | Typed world/block APIs and authoritative transaction rules |
+| AI network | Disabled | Secure request adapter, consent, key storage, bounded responses |
 
 ## Current implementation truth
 
-- LeviMania's six feature engines are tested core logic, not connected to live Bedrock actors.
-- MobTalk has a local preview console, persistent preview data, optional player-action telemetry, and a disabled-by-default experimental actor-count probe. It is not yet a creature-chat controller.
-- All experimental gameplay toggles remain off by default.
-- The existing event bridge is useful telemetry, not proof of entity, inventory, movement, rendering, or chat compatibility.
-
-Do not mark a subsystem as integrated until its API contract, exact runtime build, pointer lifetime, thread affinity, failure behavior, tests, and in-game validation are documented.
-
-- Entity recognition pipeline: verified adapters can submit pointer-free frames, maintain a bounded nearby-creature list, assign session-only target IDs, and look up the selected creature. No Bedrock actor adapter currently feeds this pipeline; it is deliberately not connected to unverified offsets.
+- The scanner now attempts automatic nearby actor enumeration when the 26.60 BedrockTools capability signatures resolve.
+- The scanner copies data into owned snapshots; it does not retain Bedrock actor pointers.
+- Non-player entity type IDs remain generic; exact mob identifiers are not yet available.
+- Console messages remain local preview only and are not delivered to mobs.
+- Inventory, movement, rendering, chat, AI networking, and gameplay behavior are not integrated.
+- Compilation and CI tests do not substitute for in-game runtime validation.
