@@ -24,7 +24,7 @@ struct State {
     bool scannerOpen{false};
     bool persist{false};
     std::string draft;
-    std::string status{"No creature runtime bridge connected"};
+    std::string status{"Waiting for BedrockTools entity scanner"};
     std::filesystem::path savePath;
     CreatureMemory preview;
 };
@@ -77,10 +77,10 @@ void render() {
     const std::string eventCounts2="Interact / use / attack: "+std::to_string(bridge.interactActions)+"/"+
         std::to_string(bridge.itemUseActions)+"/"+std::to_string(bridge.attackEvents);
     const std::string entityProbe = bridge.actorEnumerationEnabled
-        ? "Actor count probe: ON ("+std::to_string(bridge.lastActorCount)+", calls "+std::to_string(bridge.actorEnumerationCalls)+")"
+        ? "Live entity scan: ON ("+std::to_string(bridge.lastActorCount)+", frames "+std::to_string(bridge.actorEnumerationCalls)+")"
         : (bridge.actorManagerListSignatureAvailable
-            ? "Actor list signature found; enumeration OFF"
-            : "Actor list signature unavailable");
+            ? "Actor-list signature found; scanner is OFF"
+            : "26.60 entity signatures unavailable");
     std::vector<pl::modmenu::DrawCommand> commands;
     if(visible || scannerVisible) {
         using Type=pl::modmenu::DrawCommandType;
@@ -97,15 +97,18 @@ void render() {
         if(scannerVisible) {
             addText(38,91,12,"Nearby registry: "+std::to_string(nearby.count)+" entities",0xff99ff99u);
             addText(38,109,10,bridge.worldSessionSeen ? "World detected (player tick received)" : "Waiting for world/player tick",bridge.worldSessionSeen?0xff99ff99u:0xffffcc66u);
-            addText(38,123,10,"Entity feed: awaiting verified enumerator",0xffffcc66u);
+            addText(38,123,10,bridge.actorEnumerationEnabled ? "Live read-only entity feed active" : "Live entity feed unavailable",bridge.actorEnumerationEnabled?0xff99ff99u:0xffffcc66u);
             const std::size_t shown=std::min<std::size_t>(nearby.count,10);
             for(std::size_t i=0;i<shown;++i) {
                 const auto& mob=nearby.creatures[i];
                 const std::string name=mob.displayName[0]?mob.displayName:mob.typeId;
-                const std::string line=std::to_string(i+1)+". "+name+" ["+mob.typeId+"]";
+                const std::string kind=mob.isPlayer?"player":"entity type pending";
+                const std::string line=std::to_string(i+1)+". "+name+" ["+kind+"]";
                 addText(38,144+static_cast<float>(i)*16,10,line,0xffffffffu);
             }
-            if(nearby.count==0) addText(38,146,12,bridge.worldSessionSeen?"No mob snapshots received yet":"Join a world to start scanning",0xffccccccu);
+            if(nearby.count==0) addText(38,146,12,bridge.actorEnumerationEnabled
+                ? "No nearby entities in 64-block scan radius"
+                : (bridge.worldSessionSeen?"Waiting for a compatible entity adapter":"Join a world to start scanning"),0xffccccccu);
             if(nearby.count>shown) addText(38,144+static_cast<float>(shown)*16,10,
                 "+"+std::to_string(nearby.count-shown)+" more",0xffccccccu);
         } else {
@@ -115,7 +118,7 @@ void render() {
             addText(38,111,12,bridgeState,bridge.subscribed?0xff99ff99u:0xffffcc66u);
             addText(38,129,10,eventCounts,0xffcccccc);
             addText(38,143,10,eventCounts2,0xffcccccc);
-            addText(38,157,10,entityProbe,0xffffcc66u);
+            addText(38,157,10,entityProbe,bridge.actorEnumerationEnabled?0xff99ff99u:0xffffcc66u);
             addText(38,177,12,"Last local message:",0xffdddddd);
             addText(38,194,12,last.empty()?"(none yet)":last,0xffffffffu);
             addText(38,217,12,"Type below, then press Enter:",0xffdddddd);
@@ -167,8 +170,7 @@ void onButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
         g.open=!g.open; open=g.open;
         if(g.open) g.scannerOpen=false;
     }
-    if(open) pl::input::showKeyboard();
-    else pl::input::hideKeyboard();
+    if(open) pl::input::showKeyboard(); else pl::input::hideKeyboard();
     render();
 }
 void onScannerButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
@@ -185,7 +187,9 @@ void onScannerButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
 } // namespace
 
 bool registerConsole(pl::mod::ModContext& context) {
-    runtime::setActorEnumerationEnabled(false);
+    // User explicitly requested the live scanner to be unlocked. It still
+    // activates only if all three BedrockTools 26.60 signatures resolve.
+    runtime::setActorEnumerationEnabled(true);
     {
         std::lock_guard lock(g.mutex);
         g.enabled=true; g.open=false; g.scannerOpen=false; g.persist=false; g.draft.clear();
@@ -193,13 +197,13 @@ bool registerConsole(pl::mod::ModContext& context) {
         g.preview=CreatureMemory{};
         g.preview.creatureId="local-console-preview";
         g.preview.personality="UI preview only; not bound to a Bedrock entity";
-        g.status="No live Bedrock entity/chat adapter available";
+        g.status="Waiting for BedrockTools 26.60 entity scanner";
     }
     const bool module=pl::modmenu::ModuleBuilder("mobtalk_native.core","MobTalk Native")
-        .description("Native conversation core and local HUD console; live entity bridge unavailable.")
+        .description("Read-only nearby entity scanner for Bedrock 26.60 plus local conversation preview.")
         .modId(context.id()).defaultEnabled(true)
         .config("chat_memory","Save local console transcript",pl::modmenu::ConfigType::Toggle,"false")
-        .config("actor_enumeration_probe","LOCKED: unsafe internal actor probe; unavailable",pl::modmenu::ConfigType::Toggle,"false")
+        .config("actor_enumeration_probe","Enable live 26.60 nearby entity scanner (read-only)",pl::modmenu::ConfigType::Toggle,"true")
         .onConfigChanged([](std::string_view,std::string_view key,std::string_view value) {
             if(key=="actor_enumeration_probe") {
                 runtime::setActorEnumerationEnabled(value=="true" || value=="1");
@@ -228,7 +232,7 @@ bool registerConsole(pl::mod::ModContext& context) {
         .defaultVisible(true).onEvent(onScannerButton).registerButton();
     pl::input::registerKeyCallback(onKey);
     render();
-    context.logger().info("MobTalk HUD console registered; messages are local preview only");
+    context.logger().info("MobTalk HUD console and 26.60 entity scanner registered");
     return module && button && scannerButton;
 }
 void unregisterConsole() noexcept {
