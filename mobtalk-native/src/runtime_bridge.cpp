@@ -38,7 +38,7 @@ std::atomic<std::uint64_t> gActorEnumerationCalls{0}, gLastActorCount{0}, gActor
 constexpr std::uintptr_t kPlayerLevelOffset = 0x1F0;
 constexpr std::uintptr_t kLevelActorManagerOffset = 0x478;
 constexpr std::size_t kMaxActorCount = 4096;
-// No exact 26.62 binary/offset validation has been completed. Keep the
+// No exact Minecraft 26.60 binary/offset validation has been completed. Keep the
 // internal actor-list invocation hard-locked even if a config toggle is set.
 constexpr bool kActorProbeRuntimeValidated = false;
 std::atomic<std::uint64_t> gTicks{0}, gActions{0}, gAttacks{0};
