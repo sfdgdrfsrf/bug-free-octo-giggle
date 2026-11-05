@@ -75,11 +75,17 @@ jobs:
           mkdir -p dist/LeviManiaMobile
           cp manifest.json dist/LeviManiaMobile/
           cp build/liblevimania_mobile.so dist/LeviManiaMobile/
+          mkdir -p dist/MobTalkNative
+          cp mobtalk-native/manifest.json dist/MobTalkNative/
+          cp build/libmobtalk_native.so dist/MobTalkNative/
           cd dist
           zip -r levimania-mobile-arm64.levipack LeviManiaMobile
+          zip -r mobtalk-native-arm64.levipack MobTalkNative
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: levimania-mobile-arm64-levipack
-          path: dist/levimania-mobile-arm64.levipack
+          path: |
+            dist/levimania-mobile-arm64.levipack
+            dist/mobtalk-native-arm64.levipack
