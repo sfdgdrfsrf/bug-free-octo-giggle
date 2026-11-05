@@ -93,3 +93,18 @@ The source is marked All Rights Reserved. Recreate gameplay systems independentl
 - The feature registry labels the six modules `core-logic`, not runtime-integrated or parity-verified.
 - No source feature should be advertised as a complete port until its runtime bridge, controls/settings, persistence, and in-game acceptance tests are implemented.
 - The next engineering gate is a verified runtime capability layer (player/world/entity/block/inventory/render/input/audio/command hooks), followed by one port at a time with parity tests. If a required capability is unavailable, record the exact gap and keep that behavior disabled rather than faking it.
+
+
+## Additional standalone package: MobTalk Native
+
+A separate module under [mobtalk-native/](mobtalk-native/) is being built as its own `mobtalk-native-arm64.levipack`, not merged into LeviMania. The reference is [CreatureChat](https://github.com/CreatureChat/creature-chat), whose source repository describes AI-driven creature conversations, autonomous follow/flee/attack/protect behaviors, reactions, friendship, multiplayer synchronization, memory, mob inventory, and advancements.
+
+Implemented native-safe core:
+- bounded per-creature conversation memory and prompt-context construction;
+- per-creature friendship values;
+- allow-listed behavior-marker parsing;
+- basic chat/befriend/gift/take/release intent classification.
+
+Still missing for a full port: Bedrock chat hooks, entity enumeration, live goal/navigation control, inventory transactions, particle/chat-bubble rendering, multiplayer sync, persistent world data, and a secure HTTP/LLM adapter. These remain disabled. No Java/Fabric bytecode is loaded.
+
+The reference repository declares GPL-3.0-or-later for source code and CC-BY-NC-SA-4.0 for non-code assets, plus trademark restrictions. The native implementation is independently authored and does not bundle reference prompts, textures, screenshots, logos, or other assets. See [mobtalk-native/LICENSE-NOTICE.md](mobtalk-native/LICENSE-NOTICE.md).
