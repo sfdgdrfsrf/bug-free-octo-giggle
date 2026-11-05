@@ -124,7 +124,12 @@ bool extractMineRun(MineRun& run) noexcept {
     run.phase = MinePhase::Completed;
     return true;
 }
-bool returnToMineHub(MineRun& run) noexcept {\n    if (run.phase != MinePhase::Completed && run.phase != MinePhase::Failed) return false;\n    run.phase = MinePhase::Hub;\n    return true;\n}\nbool failMineRun(MineRun& run) noexcept {
+bool returnToMineHub(MineRun& run) noexcept {
+    if (run.phase != MinePhase::Completed && run.phase != MinePhase::Failed) return false;
+    run.phase = MinePhase::Hub;
+    return true;
+}
+bool failMineRun(MineRun& run) noexcept {
     if (run.phase != MinePhase::Exploring) return false;
     run.phase = MinePhase::Failed;
     run.copper = 0;
