@@ -15,7 +15,9 @@ The requested target is **Minecraft Bedrock Android 26.62 (arm64-v8a)**. This is
 - Local preview transcript save/load under the mod data directory.
 - Optional runtime event bridge to BedrockTools API ABI v1: local-player tick, game-mode action, and attack subscriptions, with block-break/place, interaction, and item-use counters. It safely fails closed if BedrockTools is not installed or its API is incompatible.
 - Read-only probe for BedrockTools v1.5.10's `ActorManagerList` signature (SignatureId ordinal 12), plus an **OFF-by-default experimental actor-count probe**. If manually enabled, it invokes the same internal function pattern used by BedrockTools Tablist during LocalPlayerTick and counts non-null entries only (maximum 4,096). It never dereferences or retains actor pointers.
-- Host tests for conversation, persistence, and runtime bridge lifecycle.
+- Host tests for conversation, persistence, runtime bridge lifecycle, and the pointer-free entity snapshot store.
+- Pointer-free entity snapshot core: bounded to 128 entities per frame, copies type/name and position/rotation into fixed-size owned buffers, rejects non-finite coordinates and duplicate transient keys, and synchronizes publication/readback. This is a tested data layer only; no Bedrock actor adapter feeds it yet.
+
 
 ## Runtime bridge requirements
 
