@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstring>
 #include <span>
+#include <mutex>
 
 namespace mobtalk::entities {
 namespace {
@@ -16,6 +17,7 @@ void copyText(char* dst, std::size_t capacity, std::string_view src) noexcept {
 }
 }
 bool SnapshotStore::publish(std::span<const EntitySample> samples) noexcept {
+    std::lock_guard lock(mutex_);
     if (samples.size() > kMaxEntitiesPerFrame) return false;
     SnapshotFrame next{};
     next.generation = frame_.generation + 1;
@@ -42,8 +44,9 @@ bool SnapshotStore::publish(std::span<const EntitySample> samples) noexcept {
     frame_ = next;
     return true;
 }
-SnapshotFrame SnapshotStore::copy() const noexcept { return frame_; }
+SnapshotFrame SnapshotStore::copy() const noexcept { std::lock_guard lock(mutex_); return frame_; }
 void SnapshotStore::clear() noexcept {
+    std::lock_guard lock(mutex_);
     const auto nextGeneration = frame_.generation + 1;
     frame_ = SnapshotFrame{};
     frame_.generation = nextGeneration;
