@@ -2,7 +2,6 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
-#include <string>
 #include <vector>
 
 int main() {
@@ -25,7 +24,6 @@ int main() {
     assert(loaded[0].friendship==42 && loaded[0].conversations==7);
     assert(loaded[0].history.size()==2);
     assert(loaded[0].history[1].text=="hey there");
-    assert(!mobtalk::saveWorldMemory(path,{})); // empty is allowed below
     assert(mobtalk::saveWorldMemory(path,std::vector<mobtalk::CreatureMemory>{}));
     loaded.clear();
     assert(mobtalk::loadWorldMemory(path,loaded) && loaded.empty());
@@ -35,6 +33,6 @@ int main() {
     }
     loaded.push_back(creature);
     assert(!mobtalk::loadWorldMemory(path,loaded));
-    assert(loaded.size()==1); // failed loads never partially replace live state
+    assert(loaded.size()==1);
     std::filesystem::remove_all(root,ec);
 }
