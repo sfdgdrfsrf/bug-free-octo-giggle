@@ -175,6 +175,7 @@ void onButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
 }
 void onScannerButton(std::string_view,pl::modmenu::ButtonEvent event,float) {
     if(event!=pl::modmenu::ButtonEvent::Click) return;
+    runtime::start(); // Retry if BedrockTools finished loading after MobTalk.
     {
         std::lock_guard lock(g.mutex);
         if(!g.enabled) return;
